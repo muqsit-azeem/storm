@@ -362,6 +362,43 @@ uint64_t IterativePolicySearch<ValueType>::getOffsetFromObservation(uint64_t sta
     return 0;
 }
 
+//template<typename ValueType>
+//void IterativePolicySearch<ValueType>::printObservationValuation(uint64_t observation) {
+//    auto const& stateValuations = pomdp.getObservationValuations();
+//    uint64_t numberOfStates = stateValuations.getNumberOfStates();
+//    assert(numberOfStates > 0);
+//
+//    for (uint64_t stateId = 0; stateId < numberOfStates; ++stateId) {
+//        auto const& valuation = stateValuations.getValuation(stateId);
+//        size_t numberOfLabels = valuation.observationLabelValues.size();
+//        assert(numberOfLabels > 0);
+//
+//        for (size_t labelIndex = 0; labelIndex < numberOfLabels; ++labelIndex) {
+//            std::cout << "State " << stateId << ", Observation Label " << labelIndex << ": "
+//                      << valuation.observationLabelValues[labelIndex] << std::endl;
+//        }
+//    }
+//}
+
+template<typename ValueType>
+void IterativePolicySearch<ValueType>::printObservationValuation() const {
+    auto const& stateValuations = pomdp.getObservationValuations();
+    uint64_t numberOfStates = stateValuations.getNumberOfStates();
+    assert(numberOfStates > 0);
+
+    for (uint64_t stateId = 0; stateId < numberOfStates; ++stateId) {
+        auto const& valuationRange = stateValuations.at(stateId);
+        STORM_PRINT("State " << stateId << std::endl);
+        for (auto it = valuationRange.begin(); it != valuationRange.end(); ++it) {
+            if (it.isLabelAssignment()) {
+                STORM_PRINT("Observation-label: val - " << it.getLabel() << ": " << it.getLabelValue() << std::endl);
+            }
+        }
+    }
+}
+
+
+
 template<typename ValueType>
 bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVector const& oneOfTheseStates,
                                                storm::storage::BitVector const& allOfTheseStates) {
@@ -546,6 +583,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                 if (!observationUpdated.get(obs) && model->getBooleanValue(ov)) {
                     STORM_LOG_TRACE("New observation updated: " << obs);
                     observationUpdated.set(obs);
+                    printObservationValuation();
                 }
                 obs++;
             }
@@ -623,6 +661,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                 // generates debug output, but here we only want it for trace level.
                 // For consistency, all output on debug level.
                 STORM_LOG_DEBUG("the scheduler so far: ");
+
                 scheduler.printForObservations(observations, observationsAfterSwitch);
             }
 

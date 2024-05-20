@@ -165,8 +165,11 @@ class IterativePolicySearch {
     bool analyzeForInitialStates(uint64_t k) {
         stats.totalTimer.start();
         STORM_LOG_TRACE("Bad states: " << surelyReachSinkStates);
+        STORM_PRINT("Bad states: " << surelyReachSinkStates);
         STORM_LOG_TRACE("Target states: " << targetStates);
+        STORM_PRINT("Target states: " << targetStates);
         STORM_LOG_TRACE("Questionmark states: " << (~surelyReachSinkStates & ~targetStates));
+        STORM_PRINT("Questionmark tates: " << (~surelyReachSinkStates & ~targetStates));
         bool result = analyze(k, ~surelyReachSinkStates & ~targetStates, pomdp.getInitialStates());
         stats.totalTimer.stop();
         return result;
@@ -183,6 +186,8 @@ class IterativePolicySearch {
     }
 
     uint64_t getOffsetFromObservation(uint64_t state, uint64_t observation) const;
+
+    void printObservationValuation() const;
 
     bool analyze(uint64_t k, storm::storage::BitVector const& oneOfTheseStates,
                  storm::storage::BitVector const& allOfTheseStates = storm::storage::BitVector());
