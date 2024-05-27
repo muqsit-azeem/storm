@@ -1,5 +1,7 @@
 #include "storm/modelchecker/csl/HybridCtmcCslModelChecker.h"
 
+#include "storm/adapters/RationalFunctionAdapter.h"
+
 #include "storm/models/symbolic/StandardRewardModel.h"
 
 #include "storm/modelchecker/csl/helper/HybridCtmcCslHelper.h"
@@ -13,6 +15,8 @@
 #include "storm/storage/dd/Bdd.h"
 #include "storm/storage/dd/DdManager.h"
 #include "storm/utility/FilteredRewardModel.h"
+
+#include "storm/adapters/RationalFunctionAdapter.h"
 
 #include "storm/logic/FragmentSpecification.h"
 
