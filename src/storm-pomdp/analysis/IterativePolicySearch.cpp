@@ -411,8 +411,6 @@ void IterativePolicySearch<ValueType>::printObservationValuation() const {
             STORM_PRINT(ss.str());
         }
     }
-//    uint_fast64_t rowCount = this->getNondeterministicChoiceIndices()[state + 1] - this->getNondeterministicChoiceIndices()[state];
-//    auto const& choiceLabelings = pomdp.getChoiceLabeling().getLabelsOfChoice(0);
 }
 
 
