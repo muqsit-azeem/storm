@@ -4,6 +4,7 @@
 #include "storm-pomdp/analysis/OneShotPolicySearch.h"
 #include "storm-pomdp/analysis/QualitativeAnalysis.h"
 #include "storm-pomdp/analysis/QualitativeAnalysisOnGraphs.h"
+#include "storm/storage/sparse/PrismChoiceOrigins.h"
 
 namespace storm::pomdp {
 namespace detail {
@@ -386,17 +387,46 @@ void IterativePolicySearch<ValueType>::printObservationValuation() const {
     uint64_t numberOfStates = stateValuations.getNumberOfStates();
     assert(numberOfStates > 0);
 
+    //pomdp.printModelInformationToStream();
+
     for (uint64_t stateId = 0; stateId < numberOfStates; ++stateId) {
         auto const& valuationRange = stateValuations.at(stateId);
-        STORM_PRINT("State " << stateId << std::endl);
+        // STORM_PRINT("State " << stateId << std::endl);
         for (auto it = valuationRange.begin(); it != valuationRange.end(); ++it) {
             if (it.isLabelAssignment()) {
-                STORM_PRINT("Observation-label: val - " << it.getLabel() << ": " << it.getLabelValue() << std::endl);
+                // STORM_PRINT("Observation-label: " << it.getLabel() << ": " << it.getLabelValue() << std::endl);
             }
+//            } else if (it.isVariableAssignment()) {
+//                if (it.isBoolean()) {
+//                    STORM_PRINT("Action-label (boolean): " << it.getVariable().getName() << ": " << std::boolalpha << it.getBooleanValue() << std::noboolalpha << std::endl);
+//                } else if (it.isInteger()) {
+//                    STORM_PRINT("Action-label (integer): " << it.getVariable().getName() << ": " << it.getIntegerValue() << std::endl);
+//                } else if (it.isRational()) {
+//                    STORM_PRINT("Action-label (rational): " << it.getVariable().getName() << ": " << it.getRationalValue() << std::endl);
+//                }
+//            }
         }
+
+        // Print action labels
+//        auto const& choiceOrigins = pomdp.getChoiceOrigins();
+//        if (!choiceOrigins) {
+//            STORM_PRINT("No choice origins available for state " << stateId << std::endl);
+//            continue;
+//        }
+//
+//        if (auto prismChoiceOrigins = std::dynamic_pointer_cast<storm::storage::sparse::PrismChoiceOrigins>(choiceOrigins)) {
+//            auto const& commandSet = prismChoiceOrigins->getCommandSet(stateId);
+//            for (auto commandIndex : commandSet) {
+//                auto moduleCommandPair = prismChoiceOrigins->getProgram().getModuleCommandIndexByGlobalCommandIndex(commandIndex);
+//                auto const& module = prismChoiceOrigins->getProgram().getModule(moduleCommandPair.first);
+//                auto const& command = module.getCommand(moduleCommandPair.second);
+//                STORM_PRINT("Action-label: " << command.getActionName() << std::endl);
+//            }
+//        } else {
+//            STORM_PRINT("No PrismChoiceOrigins available for state " << stateId << std::endl);
+//        }
     }
 }
-
 
 
 template<typename ValueType>
