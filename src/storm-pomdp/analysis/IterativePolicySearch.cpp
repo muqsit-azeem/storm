@@ -395,6 +395,24 @@ void IterativePolicySearch<ValueType>::printObservationValuation() const {
             }
         }
     }
+
+    for (uint64_t stateId = 0; stateId < numberOfStates; ++stateId) {
+        auto const& choiceLabelings = pomdp.getChoiceLabeling();
+        uint_fast64_t rowcount = pomdp.getNondeterministicChoiceIndices()[stateId + 1] - pomdp.getNondeterministicChoiceIndices()[stateId];
+        for (uint_fast64_t i = 0; i < rowcount; ++i) {
+            uint_fast64_t rowIndex = pomdp.getNondeterministicChoiceIndices()[stateId] + i;
+            auto const& choiceLabeling = choiceLabelings.getLabelsOfChoice(rowIndex);
+            std::stringstream ss;
+            ss << "State " << stateId << ", Choice " << i << ": ";
+            for (auto const& label : choiceLabeling) {
+                ss << label << " ";
+            }
+            ss << std::endl;
+            STORM_PRINT(ss.str());
+        }
+    }
+//    uint_fast64_t rowCount = this->getNondeterministicChoiceIndices()[state + 1] - this->getNondeterministicChoiceIndices()[state];
+//    auto const& choiceLabelings = pomdp.getChoiceLabeling().getLabelsOfChoice(0);
 }
 
 
