@@ -387,25 +387,33 @@ void IterativePolicySearch<ValueType>::printObservationValuation() const {
     uint64_t numberOfStates = stateValuations.getNumberOfStates();
     assert(numberOfStates > 0);
 
-    //pomdp.printModelInformationToStream();
+    // pomdp.printModelInformationToStream();
 
     for (uint64_t stateId = 0; stateId < numberOfStates; ++stateId) {
+        auto const& choiceLabelings = pomdp.getChoiceLabeling();
+        auto const& transitionMatrix = pomdp.getTransitionMatrix();
+        auto const& observations = pomdp.getObservations();
         auto const& valuationRange = stateValuations.at(stateId);
-        // STORM_PRINT("State " << stateId << std::endl);
+        STORM_PRINT("State " << stateId << " has Observation " << observations[stateId] << " which has the following observation-labels with their corresponding values" << std::endl);
+        uint_fast64_t rowcount = pomdp.getNondeterministicChoiceIndices()[stateId + 1] - pomdp.getNondeterministicChoiceIndices()[stateId];
+        // STORM_PRINT("Observation-labels with corresponding value" << std::endl);
         for (auto it = valuationRange.begin(); it != valuationRange.end(); ++it) {
             if (it.isLabelAssignment()) {
-                // STORM_PRINT("Observation-label: " << it.getLabel() << ": " << it.getLabelValue() << std::endl);
+                STORM_PRINT(it.getLabel() << ": " << it.getLabelValue() << std::endl);
             }
-//            } else if (it.isVariableAssignment()) {
-//                if (it.isBoolean()) {
-//                    STORM_PRINT("Action-label (boolean): " << it.getVariable().getName() << ": " << std::boolalpha << it.getBooleanValue() << std::noboolalpha << std::endl);
-//                } else if (it.isInteger()) {
-//                    STORM_PRINT("Action-label (integer): " << it.getVariable().getName() << ": " << it.getIntegerValue() << std::endl);
-//                } else if (it.isRational()) {
-//                    STORM_PRINT("Action-label (rational): " << it.getVariable().getName() << ": " << it.getRationalValue() << std::endl);
-//                }
-//            }
         }
+        for (uint_fast64_t choiceIndex = 0; choiceIndex < rowcount; ++choiceIndex) {
+            uint_fast64_t rowIndex = pomdp.getNondeterministicChoiceIndices()[stateId] + choiceIndex;
+            auto const& choiceLabeling = choiceLabelings.getLabelsOfChoice(rowIndex);
+            std::stringstream ss;
+            ss << "Choice " << choiceIndex << ": ";
+            for (auto const& label : choiceLabeling) {
+                ss << label << " ";
+            }
+            ss << std::endl;
+            STORM_PRINT(ss.str());
+        }
+
 
         // Print action labels
 //        auto const& choiceOrigins = pomdp.getChoiceOrigins();
@@ -427,21 +435,21 @@ void IterativePolicySearch<ValueType>::printObservationValuation() const {
 //        }
     }
 
-    for (uint64_t stateId = 0; stateId < numberOfStates; ++stateId) {
-        auto const& choiceLabelings = pomdp.getChoiceLabeling();
-        uint_fast64_t rowcount = pomdp.getNondeterministicChoiceIndices()[stateId + 1] - pomdp.getNondeterministicChoiceIndices()[stateId];
-        for (uint_fast64_t i = 0; i < rowcount; ++i) {
-            uint_fast64_t rowIndex = pomdp.getNondeterministicChoiceIndices()[stateId] + i;
-            auto const& choiceLabeling = choiceLabelings.getLabelsOfChoice(rowIndex);
-            std::stringstream ss;
-            ss << "State " << stateId << ", Choice " << i << ": ";
-            for (auto const& label : choiceLabeling) {
-                ss << label << " ";
-            }
-            ss << std::endl;
-            STORM_PRINT(ss.str());
-        }
-    }
+//    for (uint64_t stateId = 0; stateId < numberOfStates; ++stateId) {
+//
+//        uint_fast64_t rowcount = pomdp.getNondeterministicChoiceIndices()[stateId + 1] - pomdp.getNondeterministicChoiceIndices()[stateId];
+//        for (uint_fast64_t choiceIndex = 0; choiceIndex < rowcount; ++choiceIndex) {
+//            uint_fast64_t rowIndex = pomdp.getNondeterministicChoiceIndices()[stateId] + choiceIndex;
+//            auto const& choiceLabeling = choiceLabelings.getLabelsOfChoice(rowIndex);
+//            std::stringstream ss;
+//            ss << "State " << stateId << ", Observation " << observations[stateId] << ", Choice " << choiceIndex << ": ";
+//            for (auto const& label : choiceLabeling) {
+//                ss << label << " ";
+//            }
+//            ss << std::endl;
+//            STORM_PRINT(ss.str());
+//        }
+//    }
 }
 
 
