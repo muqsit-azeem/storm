@@ -381,6 +381,54 @@ uint64_t IterativePolicySearch<ValueType>::getOffsetFromObservation(uint64_t sta
 //    }
 //}
 
+
+
+template<typename ValueType>
+void IterativePolicySearch<ValueType>::printThisObservationValuation(uint64_t obs) const {
+    auto const& stateValuations = pomdp.getObservationValuations();
+    uint64_t numberOfStates = stateValuations.getNumberOfStates();
+    assert(numberOfStates > 0);
+
+    auto valuations = pomdp.getStateValuations().valuations;
+    // pomdp.printModelInformationToStream();
+
+    for (uint64_t stateId = 0; stateId < numberOfStates; ++stateId) {
+        auto valuationStateId = valuations[stateId];
+
+
+
+
+        auto const& observations = pomdp.getObservations();
+        //auto x = pomdp.getStatesWithObservation(2);
+        auto y = pomdp.getObservation(6);
+        auto y1 = pomdp.getStateValuations();
+        auto z = pomdp.getObservationValuations();
+        auto const& valuationRange = stateValuations.at(stateId);
+//        STORM_PRINT("Given observation " << obs << "State " << stateId << " has Observation " << observations[stateId]
+//                             << " which has the following observation-labels with their corresponding values" << std::endl);
+        if (obs == observations[stateId]){
+            STORM_PRINT("Given observation " << obs << "State " << stateId << " has Observation " << observations[stateId]
+                             << " which has the following observation-labels with their corresponding values" << std::endl);
+            STORM_PRINT("Observation-labels with corresponding actual value" << std::endl);
+
+
+
+            for (auto it = valuationRange.begin(); it != valuationRange.end(); ++it) {
+                //STORM_PRINT();
+                if (it.isInteger()) {
+                    STORM_PRINT(it.getName() << " : " << it.getIntegerValue() << std::endl);
+                }
+                if (it.isRational()) {
+                    STORM_PRINT(it.getName() << " : " << it.getRationalValue() << std::endl);
+                }
+                if (it.isBoolean()) {
+                    STORM_PRINT(it.getName() << " : " << it.getBooleanValue() << std::endl);
+                }
+            }
+        }
+    }
+}
+
 template<typename ValueType>
 void IterativePolicySearch<ValueType>::printObservationValuation() const {
     auto const& stateValuations = pomdp.getObservationValuations();
@@ -396,10 +444,19 @@ void IterativePolicySearch<ValueType>::printObservationValuation() const {
         auto const& valuationRange = stateValuations.at(stateId);
         STORM_PRINT("State " << stateId << " has Observation " << observations[stateId] << " which has the following observation-labels with their corresponding values" << std::endl);
         uint_fast64_t rowcount = pomdp.getNondeterministicChoiceIndices()[stateId + 1] - pomdp.getNondeterministicChoiceIndices()[stateId];
-        // STORM_PRINT("Observation-labels with corresponding value" << std::endl);
+        STORM_PRINT("Observation-labels with corresponding value" << std::endl);
         for (auto it = valuationRange.begin(); it != valuationRange.end(); ++it) {
-            if (it.isLabelAssignment()) {
-                STORM_PRINT(it.getLabel() << ": " << it.getLabelValue() << std::endl);
+//            if (it.isLabelAssignment()) {
+//                STORM_PRINT(it.getLabel() << ": " << it.getLabelValue() << std::endl);
+//            }
+            if (it.isInteger()) {
+                STORM_PRINT(it.getName() << "VARRRR: " << it.getIntegerValue() << std::endl);
+            }
+            if (it.isRational()) {
+                STORM_PRINT(it.getName() << "VARRRR: " << it.getRationalValue() << std::endl);
+            }
+            if (it.isBoolean()) {
+                STORM_PRINT(it.getName() << "VARRRR: " << it.getBooleanValue() << std::endl);
             }
         }
         for (uint_fast64_t choiceIndex = 0; choiceIndex < rowcount; ++choiceIndex) {
@@ -454,11 +511,40 @@ void IterativePolicySearch<ValueType>::printObservationValuation() const {
 
 
 template<typename ValueType>
+void IterativePolicySearch<ValueType>::myPrintForObservations(storm::models::sparse::Pomdp<ValueType> const& pomdp , InternalObservationScheduler scheduler, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch) {
+
+    for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+        if (observations.get(obs) || observationsAfterSwitch.get(obs)) {
+            STORM_LOG_INFO("For STORM observation: " << obs);
+            printThisObservationValuation(obs);
+
+        }
+        if (observations.get(obs)) {
+            std::stringstream ss;
+            ss << "actions Muqsit:";
+            for (auto act : scheduler.actions[obs]) {
+                ss << " " << act;
+            }
+            if (scheduler.switchObservations.get(obs)) {
+                ss << " and switch. Muqsit";
+            }
+            STORM_LOG_INFO(ss.str());
+        }
+        if (observationsAfterSwitch.get(obs)) {
+            STORM_LOG_INFO("scheduler ref MUQSIT: " << scheduler.schedulerRef[obs]);
+        }
+    }
+}
+
+template<typename ValueType>
 bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVector const& oneOfTheseStates,
                                                storm::storage::BitVector const& allOfTheseStates) {
     STORM_LOG_DEBUG("Surely reach sink states: " << surelyReachSinkStates);
     STORM_LOG_DEBUG("Target states " << targetStates);
     STORM_LOG_DEBUG("Questionmark states " << (~surelyReachSinkStates & ~targetStates));
+    STORM_PRINT("Surely reach sink states: " << surelyReachSinkStates);
+    STORM_PRINT("Target states " << targetStates);
+    STORM_PRINT("Questionmark states " << (~surelyReachSinkStates & ~targetStates));
     stats.initializeSolverTimer.start();
     // TODO: When do we need to reinitialize? When the solver has been reset.
     bool lookaheadConstraintsRequired = initialize(k);
@@ -720,7 +806,10 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                 // For consistency, all output on debug level.
                 STORM_LOG_DEBUG("the scheduler so far: ");
 
-                scheduler.printForObservations(observations, observationsAfterSwitch);
+                // scheduler.printForObservations(observations, observationsAfterSwitch);
+
+                myPrintForObservations(pomdp, scheduler, observations, observationsAfterSwitch);
+
             }
 
             if (foundWhatWeLookFor ||
@@ -760,7 +849,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             // generates info output, but here we only want it for debug level.
             // For consistency, all output on info level.
             STORM_LOG_DEBUG("the scheduler: ");
-            scheduler.printForObservations(observations, observationsAfterSwitch);
+            // scheduler.printForObservations(observations, observationsAfterSwitch);
         }
 
         stats.winningRegionUpdatesTimer.start();
@@ -804,6 +893,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             storm::analysis::QualitativeAnalysisOnGraphs<ValueType> graphanalysis(pomdp);
             uint64_t targetStatesBefore = targetStates.getNumberOfSetBits();
             STORM_LOG_DEBUG("Target states before graph based analysis " << targetStates.getNumberOfSetBits());
+            STORM_PRINT("Target states before graph based analysis " << targetStates.getNumberOfSetBits());
             targetStates = graphanalysis.analyseProb1Max(~surelyReachSinkStates, targetStates);
             uint64_t targetStatesAfter = targetStates.getNumberOfSetBits();
             STORM_LOG_DEBUG("Target states after graph based analysis " << targetStates.getNumberOfSetBits());

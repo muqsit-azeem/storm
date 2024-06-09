@@ -84,10 +84,12 @@ struct InternalObservationScheduler {
         return actions.empty();
     }
 
+
+
     void printForObservations(storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch) const {
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
             if (observations.get(obs) || observationsAfterSwitch.get(obs)) {
-                STORM_LOG_INFO("For observation: " << obs);
+                STORM_LOG_INFO("For observation: " << obs );
             }
             if (observations.get(obs)) {
                 std::stringstream ss;
@@ -189,6 +191,9 @@ class IterativePolicySearch {
 
     void printObservationValuation() const;
 
+    void myPrintForObservations(const models::sparse::Pomdp<ValueType>& pomdp, InternalObservationScheduler scheduler, const storage::BitVector& observations,
+                                const storage::BitVector& observationsAfterSwitch);
+
     bool analyze(uint64_t k, storm::storage::BitVector const& oneOfTheseStates,
                  storm::storage::BitVector const& allOfTheseStates = storm::storage::BitVector());
 
@@ -252,6 +257,8 @@ class IterativePolicySearch {
     std::shared_ptr<WinningRegionQueryInterface<ValueType>> validator;
 
     mutable bool useFindOffset = false;
+
+    void printThisObservationValuation(uint64_t obs) const;
 };
 }  // namespace pomdp
 }  // namespace storm

@@ -136,6 +136,7 @@ class StateValuations : public storm::models::sparse::StateAnnotation {
     StateValuations blowup(std::vector<uint64_t> const& mapNewToOld) const;
 
     virtual std::size_t hash() const;
+    std::vector<StateValuation> valuations;
 
    private:
     StateValuations(std::map<storm::expressions::Variable, uint64_t> const& variableToIndexMap, std::vector<StateValuation>&& valuations);
@@ -145,7 +146,7 @@ class StateValuations : public storm::models::sparse::StateAnnotation {
     std::map<storm::expressions::Variable, uint64_t> variableToIndexMap;
     std::map<std::string, uint64_t> observationLabels;
     // A mapping from state indices to their variable valuations.
-    std::vector<StateValuation> valuations;
+
 };
 
 class StateValuationsBuilder {
