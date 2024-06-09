@@ -84,16 +84,33 @@ struct InternalObservationScheduler {
         return actions.empty();
     }
 
-    void printForObservations(storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch) const {
+    void printForObservations(const storage::sparse::StateValuations& obsValuations, const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch) const {
+//        STORM_PRINT("Observations: " << observations);
+//        STORM_PRINT("Observations after switch: " << observationsAfterSwitch);
+//        STORM_PRINT("Switch observations: " << switchObservations);
+//        STORM_PRINT("Actions: " << actions);
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
-            if (observations.get(obs) || observationsAfterSwitch.get(obs)) {
-                STORM_LOG_INFO("For observation: " << obs);
-            }
+//            if (observations.get(obs) || observationsAfterSwitch.get(obs)) {
+//                  STORM_LOG_INFO("For observation: " << obs);
+//                auto obsInfo = obsValuations.getStateInfo(obs);
+//                STORM_LOG_INFO("For Observation " << obsInfo <<  " with Storm internal id = " << obs << ":");
+//            }
+//            else {
+//                STORM_LOG_INFO("For observation: " << obs << " (not relevant)");
+//            }
             if (observations.get(obs)) {
+                auto obsInfo = obsValuations.getStateInfo(obs);
+//                STORM_LOG_INFO("For Observation " << obsInfo <<  " with Storm internal id = " << obs << ":");
                 std::stringstream ss;
-                ss << "actions:";
-                for (auto act : actions[obs]) {
-                    ss << " " << act;
+                ss << "Observation = " << obsInfo <<  " | Storm internal id = " << obs << " | actions = ";
+                auto stateId = statesPerObservation[obs][0]; // assuming it is enough to look at the first state to get the correct action
+                    for (auto act : actions[obs]) {
+//                    ss << " " << act;
+                    uint_fast64_t rowIndex = choiceIndices[stateId] + act;
+                    auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
+                    for (const auto& choiceLabel : choiceLabels) {
+                        ss << " " << choiceLabel;
+                    }
                 }
                 if (switchObservations.get(obs)) {
                     ss << " and switch.";
@@ -101,7 +118,10 @@ struct InternalObservationScheduler {
                 STORM_LOG_INFO(ss.str());
             }
             if (observationsAfterSwitch.get(obs)) {
-                STORM_LOG_INFO("scheduler ref: " << schedulerRef[obs]);
+                auto obsInfo = obsValuations.getStateInfo(obs);
+                std::stringstream ss;
+                ss << "Observation after switch = " << obsInfo <<  " | Storm internal id = " << obs << " | ";
+                STORM_LOG_INFO(ss.str() << "scheduler ref: " << schedulerRef[obs]);
             }
         }
     }
@@ -187,7 +207,7 @@ class IterativePolicySearch {
 
     uint64_t getOffsetFromObservation(uint64_t state, uint64_t observation) const;
 
-    void printObservationValuation() const;
+    void printAllValuation() const;
 
     bool analyze(uint64_t k, storm::storage::BitVector const& oneOfTheseStates,
                  storm::storage::BitVector const& allOfTheseStates = storm::storage::BitVector());
@@ -252,6 +272,8 @@ class IterativePolicySearch {
     std::shared_ptr<WinningRegionQueryInterface<ValueType>> validator;
 
     mutable bool useFindOffset = false;
+    std::string getObservationValuation(uint64_t observation);
+    std::string getActionLabel(uint64_t observation, uint64_t action_offset);
 };
 }  // namespace pomdp
 }  // namespace storm

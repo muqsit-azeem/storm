@@ -348,7 +348,7 @@ bool IterativePolicySearch<ValueType>::initialize(uint64_t k) {
 template<typename ValueType>
 uint64_t IterativePolicySearch<ValueType>::getOffsetFromObservation(uint64_t state, uint64_t observation) const {
     if (!useFindOffset) {
-        STORM_LOG_WARN("This code is slow and should only be used for debugging.");
+//        STORM_LOG_WARN("This code is slow and should only be used for debugging.");
         useFindOffset = true;
     }
     uint64_t offset = 0;
@@ -381,7 +381,7 @@ uint64_t IterativePolicySearch<ValueType>::getOffsetFromObservation(uint64_t sta
 //}
 
 template<typename ValueType>
-void IterativePolicySearch<ValueType>::printObservationValuation() const {
+void IterativePolicySearch<ValueType>::printAllValuation() const {
     auto const& stateValuations = pomdp.getObservationValuations();
     uint64_t numberOfStates = stateValuations.getNumberOfStates();
     assert(numberOfStates > 0);
@@ -413,7 +413,22 @@ void IterativePolicySearch<ValueType>::printObservationValuation() const {
     }
 }
 
+template<typename ValueType> std::string IterativePolicySearch<ValueType>::getObservationValuation(uint64_t observation) {
+    auto const& obsValuations = pomdp.getObservationValuations();
+    return obsValuations.getStateInfo(observation);
+}
 
+template<typename ValueType> std::string IterativePolicySearch<ValueType>::getActionLabel(uint64_t observation, uint64_t action_offset) {
+    auto stateId = statesPerObservation[observation][0];
+    auto const& choiceLabelings = pomdp.getChoiceLabeling();
+    uint_fast64_t rowIndex = pomdp.getNondeterministicChoiceIndices()[stateId] + action_offset;
+    auto const& choiceLabels = choiceLabelings.getLabelsOfChoice(rowIndex);
+    std::stringstream ss;
+    for (auto const& label : choiceLabels) {
+        ss << label << " ";
+    }
+    return ss.str();
+}
 
 template<typename ValueType>
 bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVector const& oneOfTheseStates,
@@ -432,6 +447,12 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
     storm::storage::BitVector updated(pomdp.getNrObservations());
     storm::storage::BitVector potentialWinner(pomdp.getNrObservations());
     storm::storage::BitVector observationsWithPartialWinners(pomdp.getNrObservations());
+
+    // Following things are used to print explainable strategy
+    auto const& obsValuations = pomdp.getObservationValuations();
+    auto const& choiceLabeling = pomdp.getChoiceLabeling();
+    auto const& choiceIndices = pomdp.getNondeterministicChoiceIndices();
+
     for (uint64_t observation = 0; observation < pomdp.getNrObservations(); ++observation) {
         if (winningRegion.observationIsWinning(observation)) {
             continue;
@@ -446,7 +467,9 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             }
         }
         if (observationIsWinning) {
-            STORM_LOG_TRACE("Observation " << observation << " is winning.");
+//            STORM_LOG_TRACE("Observation " << observation << " is winning.");
+            auto obsInfo = getObservationValuation(observation);
+            STORM_LOG_INFO("Observation " << obsInfo <<  " with Storm internal id = " << observation << " is target.");
             stats.incrementGraphBasedWinningObservations();
             winningRegion.setObservationIsWinning(observation);
             updated.set(observation);
@@ -454,22 +477,26 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
     }
     STORM_LOG_DEBUG("Graph based winning obs: " << stats.getGraphBasedwinningObservations());
     observationsWithPartialWinners &= potentialWinner;
-    for (auto const observation : observationsWithPartialWinners) {
-        uint64_t nrStatesForObs = statesPerObservation[observation].size();
-        storm::storage::BitVector update(nrStatesForObs);
-        for (uint64_t i = 0; i < nrStatesForObs; ++i) {
-            uint64_t state = statesPerObservation[observation][i];
-            if (targetStates.get(state)) {
-                update.set(i);
-            }
-        }
-        assert(!update.empty());
-        STORM_LOG_TRACE("Extend winning region for observation " << observation << " with target states/offsets" << update);
-        winningRegion.addTargetStates(observation, update);
-        assert(winningRegion.query(observation, update));  // "Cannot continue: No scheduler known for state " << i << " (observation " << obs << ").");
 
-        updated.set(observation);
-    }
+    // commented the initial graph search below
+
+//    for (auto const observation : observationsWithPartialWinners) {
+//        uint64_t nrStatesForObs = statesPerObservation[observation].size();
+//        storm::storage::BitVector update(nrStatesForObs);
+//        for (uint64_t i = 0; i < nrStatesForObs; ++i) {
+//            uint64_t state = statesPerObservation[observation][i];
+//            if (targetStates.get(state)) {
+//                update.set(i);
+//            }
+//        }
+//        assert(!update.empty());
+//        STORM_LOG_TRACE("Extend winning region for observation " << observation << " with target states/offsets" << update);
+//        STORM_LOG_INFO("Extend winning region for observation " << observation << " with target states/offsets" << update);
+//        winningRegion.addTargetStates(observation, update);
+//        assert(winningRegion.query(observation, update));  // "Cannot continue: No scheduler known for state " << i << " (observation " << obs << ").");
+//
+//        updated.set(observation);
+//    }
 
 #ifndef NDEBUG
     for (auto const& state : targetStates) {
@@ -544,6 +571,8 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
 
     assert(pomdp.getNrObservations() == schedulerForObs.size());
 
+//    printAllValuation();
+
     InternalObservationScheduler scheduler;
     scheduler.switchObservations = storm::storage::BitVector(pomdp.getNrObservations());
     storm::storage::BitVector newObservations(pomdp.getNrObservations());
@@ -603,7 +632,6 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                 if (!observationUpdated.get(obs) && model->getBooleanValue(ov)) {
                     STORM_LOG_TRACE("New observation updated: " << obs);
                     observationUpdated.set(obs);
-                    printObservationValuation();
                 }
                 obs++;
             }
@@ -678,11 +706,11 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             }
 
             if (options.computeTraceOutput()) {
-                // generates debug output, but here we only want it for trace level.
-                // For consistency, all output on debug level.
+//                 generates debug output, but here we only want it for trace level.
+//                 For consistency, all output on debug level.
                 STORM_LOG_DEBUG("the scheduler so far: ");
 
-                scheduler.printForObservations(observations, observationsAfterSwitch);
+            scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
             }
 
             if (foundWhatWeLookFor ||
@@ -715,15 +743,15 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         // smtSolver->unsetTimeout();
         smtSolver->pop();
 
-        if (options.computeDebugOutput()) {
+//        if (options.computeDebugOutput()) {
             std::stringstream strstr;
             coveredStatesToStream(strstr, ~coveredStates);
             STORM_LOG_DEBUG(strstr.str());
             // generates info output, but here we only want it for debug level.
             // For consistency, all output on info level.
             STORM_LOG_DEBUG("the scheduler: ");
-            scheduler.printForObservations(observations, observationsAfterSwitch);
-        }
+            scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
+//        }
 
         stats.winningRegionUpdatesTimer.start();
         storm::storage::BitVector updated(observations.size());
@@ -761,63 +789,70 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         if (foundWhatWeLookFor) {
             return true;
         }
-        if (newTargetObservations > 0) {
-            stats.graphSearchTime.start();
-            storm::analysis::QualitativeAnalysisOnGraphs<ValueType> graphanalysis(pomdp);
-            uint64_t targetStatesBefore = targetStates.getNumberOfSetBits();
-            STORM_LOG_DEBUG("Target states before graph based analysis " << targetStates.getNumberOfSetBits());
-            targetStates = graphanalysis.analyseProb1Max(~surelyReachSinkStates, targetStates);
-            uint64_t targetStatesAfter = targetStates.getNumberOfSetBits();
-            STORM_LOG_DEBUG("Target states after graph based analysis " << targetStates.getNumberOfSetBits());
-            stats.graphSearchTime.stop();
-            if (targetStatesAfter - targetStatesBefore > 0) {
-                stats.winningRegionUpdatesTimer.start();
-                storm::storage::BitVector potentialWinner(pomdp.getNrObservations());
-                storm::storage::BitVector observationsWithPartialWinners(pomdp.getNrObservations());
-                for (uint64_t observation = 0; observation < pomdp.getNrObservations(); ++observation) {
-                    if (winningRegion.observationIsWinning(observation)) {
-                        continue;
-                    }
-                    bool observationIsWinning = true;
-                    for (uint64_t state : statesPerObservation[observation]) {
-                        if (!targetStates.get(state)) {
-                            observationIsWinning = false;
-                            observationsWithPartialWinners.set(observation);
-                        } else {
-                            potentialWinner.set(observation);
-                        }
-                    }
-                    if (observationIsWinning) {
-                        stats.incrementGraphBasedWinningObservations();
-                        winningRegion.setObservationIsWinning(observation);
-                        updated.set(observation);
-                    }
-                }
-                STORM_LOG_DEBUG("Graph-based winning obs: " << stats.getGraphBasedwinningObservations());
-                observationsWithPartialWinners &= potentialWinner;
-                for (auto const observation : observationsWithPartialWinners) {
-                    uint64_t nrStatesForObs = statesPerObservation[observation].size();
-                    storm::storage::BitVector update(nrStatesForObs);
-                    for (uint64_t i = 0; i < nrStatesForObs; ++i) {
-                        uint64_t state = statesPerObservation[observation][i];
-                        if (targetStates.get(state)) {
-                            update.set(i);
-                        }
-                    }
-                    assert(!update.empty());
-                    STORM_LOG_TRACE("Extend winning region for observation " << observation << " with target states/offsets" << update);
-                    winningRegion.addTargetStates(observation, update);
-                    assert(winningRegion.query(observation, update));  //
-                    updated.set(observation);
-                }
-                stats.winningRegionUpdatesTimer.stop();
 
-                if (observationsWithPartialWinners.getNumberOfSetBits() > 0) {
-                    reset();
-                    return analyze(k, ~targetStates & ~surelyReachSinkStates, allOfTheseStates);
-                }
-            }
-        }
+        // commented the final graph based analysis below
+
+//        if (newTargetObservations > 0) {
+//            stats.graphSearchTime.start();
+//            storm::analysis::QualitativeAnalysisOnGraphs<ValueType> graphanalysis(pomdp);
+//            uint64_t targetStatesBefore = targetStates.getNumberOfSetBits();
+////            STORM_LOG_DEBUG("Target states before graph based analysis " << targetStates.getNumberOfSetBits());
+////            STORM_LOG_INFO("Target states before graph based analysis " << targetStates.getNumberOfSetBits());
+////            targetStates = graphanalysis.analyseProb1Max(~surelyReachSinkStates, targetStates);
+//            uint64_t targetStatesAfter = targetStates.getNumberOfSetBits();
+//            STORM_LOG_DEBUG("Target states after graph based analysis " << targetStates.getNumberOfSetBits());
+////            STORM_LOG_INFO("Target states after graph based analysis " << targetStates.getNumberOfSetBits());
+//            stats.graphSearchTime.stop();
+//            if (targetStatesAfter - targetStatesBefore > 0) {
+//                stats.winningRegionUpdatesTimer.start();
+//                storm::storage::BitVector potentialWinner(pomdp.getNrObservations());
+//                storm::storage::BitVector observationsWithPartialWinners(pomdp.getNrObservations());
+//                for (uint64_t observation = 0; observation < pomdp.getNrObservations(); ++observation) {
+//                    if (winningRegion.observationIsWinning(observation)) {
+//                        continue;
+//                    }
+//                    bool observationIsWinning = true;
+//                    for (uint64_t state : statesPerObservation[observation]) {
+//                        if (!targetStates.get(state)) {
+//                            observationIsWinning = false;
+//                            observationsWithPartialWinners.set(observation);
+//                        } else {
+//                            potentialWinner.set(observation);
+//                        }
+//                    }
+//                    if (observationIsWinning) {
+//                        stats.incrementGraphBasedWinningObservations();
+//                        winningRegion.setObservationIsWinning(observation);
+//                        STORM_LOG_INFO("Observation " << getObservationValuation(observation) << " with Storm internal id = " << observation << " is winning.");
+//                        updated.set(observation);
+//                    }
+//                }
+//                STORM_LOG_DEBUG("Graph-based winning obs: " << stats.getGraphBasedwinningObservations());
+//                observationsWithPartialWinners &= potentialWinner;
+//                for (auto const observation : observationsWithPartialWinners) {
+//                    uint64_t nrStatesForObs = statesPerObservation[observation].size();
+//                    storm::storage::BitVector update(nrStatesForObs);
+//                    for (uint64_t i = 0; i < nrStatesForObs; ++i) {
+//                        uint64_t state = statesPerObservation[observation][i];
+//                        if (targetStates.get(state)) {
+//                            update.set(i);
+//                        }
+//                    }
+//                    assert(!update.empty());
+//                    STORM_LOG_TRACE("Extend winning region for observation " << observation << " with target states/offsets" << update);
+//                    winningRegion.addTargetStates(observation, update);
+//                    assert(winningRegion.query(observation, update));  //
+//                    updated.set(observation);
+//                }
+//                stats.winningRegionUpdatesTimer.stop();
+//
+//                if (observationsWithPartialWinners.getNumberOfSetBits() > 0) {
+//                    reset();
+//                    return analyze(k, ~targetStates & ~surelyReachSinkStates, allOfTheseStates);
+//                }
+//            }
+//        }
+
         STORM_LOG_ASSERT(!updated.empty(), "The strategy should be new in at least one place");
         if (options.computeDebugOutput()) {
             winningRegion.print();
@@ -862,6 +897,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             ++obs;
         }
         finalSchedulers.push_back(scheduler);
+        STORM_LOG_INFO("New scheduler ref:" << finalSchedulers.size()); // I am guessing this would match the scheduler refs in future scheduler.
 
         smtSolver->push();
 
@@ -878,6 +914,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             }
         }
         stats.updateNewStrategySolverTime.stop();
+
 
         STORM_LOG_INFO("... after iteration " << stats.getIterations() << " so far " << stats.getChecks() << " checks.");
     }
