@@ -92,6 +92,7 @@ class StateValuations : public storm::models::sparse::StateAnnotation {
     StateValuations() = default;
     virtual ~StateValuations() = default;
     virtual std::string getStateInfo(storm::storage::sparse::state_type const& state) const override;
+    std::map<std::string, std::string> getObsevationValuationforExplainability(const state_type& state) const;
     StateValueIteratorRange at(storm::storage::sparse::state_type const& state) const;
 
     bool getBooleanValue(storm::storage::sparse::state_type const& stateIndex, storm::expressions::Variable const& booleanVariable) const;
@@ -109,6 +110,15 @@ class StateValuations : public storm::models::sparse::StateAnnotation {
      */
     std::string toString(storm::storage::sparse::state_type const& stateIndex, bool pretty = true,
                          boost::optional<std::set<storm::expressions::Variable>> const& selectedVariables = boost::none) const;
+
+    /*!
+     * Returns a a map representation of the valuation.
+     * inted to use for the observation as selected variables for expalainability
+     * @param selectedVariables If given, only the informations for the variables in this set are processed.
+     * @return The string representation.
+     */
+    std::map<std::string, std::string> toMap(storm::storage::sparse::state_type const& stateIndex,
+                      boost::optional<std::set<storm::expressions::Variable>> const& selectedVariables = boost::none) const;
 
     /*!
      * Returns a JSON representation of this valuation
@@ -146,6 +156,7 @@ class StateValuations : public storm::models::sparse::StateAnnotation {
     std::map<std::string, uint64_t> observationLabels;
     // A mapping from state indices to their variable valuations.
     std::vector<StateValuation> valuations;
+    // std::map<std::string, std::string> toMap(const state_type& stateIndex, const boost::optional<storm::expressions::Variable>& selectedVariables) const;
 };
 
 class StateValuationsBuilder {

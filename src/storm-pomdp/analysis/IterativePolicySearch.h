@@ -74,6 +74,7 @@ struct InternalObservationScheduler {
     std::vector<uint64_t> schedulerRef;
     storm::storage::BitVector switchObservations;
 
+
     void reset(uint64_t nrObservations, uint64_t nrActions) {
         actions = std::vector<storm::storage::BitVector>(nrObservations, storm::storage::BitVector(nrActions));
         schedulerRef = std::vector<uint64_t>(nrObservations, 0);
@@ -121,6 +122,48 @@ struct InternalObservationScheduler {
                 auto obsInfo = obsValuations.getStateInfo(obs);
                 std::stringstream ss;
                 ss << "Observation after switch = " << obsInfo <<  " | Storm internal id = " << obs << " | ";
+                STORM_LOG_INFO(ss.str() << "scheduler ref: " << schedulerRef[obs]);
+            }
+        }
+    }
+
+    void exportObservationBasedSchedulers(const storage::sparse::StateValuations& obsValuations, const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch) const {
+        for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+            if (observations.get(obs)) {
+                auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+                std::stringstream ss;
+                ss << std::endl << " | Storm internal id = " << obs ;
+
+                ss << " | Observation = " ;
+
+                for (const auto& [obsName, obsVal] : obsInfo) {
+                    ss << obsName << ": " << obsVal << std::endl;
+                }
+                ss << " | actions = ";
+                auto stateId = statesPerObservation[obs][0]; // assuming it is enough to look at the first state to get the correct action
+                for (auto act : actions[obs]) {
+                    //                    ss << " " << act;
+                    uint_fast64_t rowIndex = choiceIndices[stateId] + act;
+                    auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
+                    for (const auto& choiceLabel : choiceLabels) {
+                        ss << " " << choiceLabel;
+                    }
+                }
+                if (switchObservations.get(obs)) {
+                    ss << " and switch.";
+                }
+                STORM_LOG_INFO(ss.str());
+            }
+            if (observationsAfterSwitch.get(obs)) {
+                auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+                std::stringstream ss;
+                ss << std::endl << " | Storm internal id = " << obs ;
+
+                ss << " | Observation After Switch = " ;
+
+                for (const auto& [obsName, obsVal] : obsInfo) {
+                    ss << obsName << ": " << obsVal << std::endl;
+                }
                 STORM_LOG_INFO(ss.str() << "scheduler ref: " << schedulerRef[obs]);
             }
         }

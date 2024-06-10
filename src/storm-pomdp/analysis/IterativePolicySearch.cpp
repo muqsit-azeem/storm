@@ -448,7 +448,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
     storm::storage::BitVector potentialWinner(pomdp.getNrObservations());
     storm::storage::BitVector observationsWithPartialWinners(pomdp.getNrObservations());
 
-    // Following things are used to print explainable strategy
+    // preparation to print explainable strategy
     auto const& obsValuations = pomdp.getObservationValuations();
     auto const& choiceLabeling = pomdp.getChoiceLabeling();
     auto const& choiceIndices = pomdp.getNondeterministicChoiceIndices();
@@ -710,7 +710,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
 //                 For consistency, all output on debug level.
                 STORM_LOG_DEBUG("the scheduler so far: ");
 
-            scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
+            // scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
             }
 
             if (foundWhatWeLookFor ||
@@ -750,7 +750,8 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             // generates info output, but here we only want it for debug level.
             // For consistency, all output on info level.
             STORM_LOG_DEBUG("the scheduler: ");
-            scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
+            // scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
+            scheduler.exportObservationBasedSchedulers(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
 //        }
 
         stats.winningRegionUpdatesTimer.start();
