@@ -219,10 +219,52 @@ std::string StateValuations::toString(storm::storage::sparse::state_type const& 
 
     if (pretty) {
         return "[" + boost::join(assignments, "\t& ") + "]";
-    } else {
+    }
+    else {
         return "[" + boost::join(assignments, "\t") + "]";
     }
 }
+
+
+std::map<std::string, std::string> StateValuations::toMap(storm::storage::sparse::state_type const& stateIndex,
+                                                          boost::optional<std::set<storm::expressions::Variable>> const& selectedVariables) const {
+    auto const& valueAssignment = at(stateIndex);
+    typename std::set<storm::expressions::Variable>::const_iterator setIt;
+    if (selectedVariables) {
+        setIt = selectedVariables->begin();
+    }
+    std::map<std::string, std::string> assignments;
+    for (auto valIt = valueAssignment.begin(); valIt != valueAssignment.end(); ++valIt) {
+        if (selectedVariables && (*setIt != valIt.getVariable())) {
+            continue;
+        }
+
+        std::stringstream stream;
+        std::string varName = valIt.getName();
+        if (valIt.isBoolean()) {
+            stream << std::boolalpha << valIt.getBooleanValue() << std::noboolalpha;
+        } else if (valIt.isInteger()) {
+            stream << valIt.getIntegerValue();
+        } else if (valIt.isRational()) {
+            stream << valIt.getRationalValue();
+        } else if (valIt.isLabelAssignment()) {
+            stream << valIt.getLabelValue();
+        }
+        assignments[varName] = stream.str();
+
+        if (selectedVariables) {
+            // Go to next selected position
+            ++setIt;
+        }
+    }
+    STORM_LOG_ASSERT(!selectedVariables || setIt == selectedVariables->end(), "Valuation does not consider selected variable " << setIt->getName() << ".");
+
+    return assignments;
+}
+
+
+
+
 
 template<typename JsonRationalType>
 storm::json<JsonRationalType> StateValuations::toJson(storm::storage::sparse::state_type const& stateIndex,
@@ -297,6 +339,12 @@ StateValuations::StateValuations(std::map<storm::expressions::Variable, uint64_t
 std::string StateValuations::getStateInfo(state_type const& state) const {
     STORM_LOG_ASSERT(state < getNumberOfStates(), "Invalid state index.");
     return this->toString(state);
+}
+
+//written by Muqsit: 09.06
+std::map<std::string, std::string> StateValuations::getObsevationValuationforExplainability(state_type const& state) const {
+    STORM_LOG_ASSERT(state < getNumberOfStates(), "Invalid state index.");
+    return this->toMap(state);
 }
 
 typename StateValuations::StateValueIteratorRange StateValuations::at(state_type const& state) const {
