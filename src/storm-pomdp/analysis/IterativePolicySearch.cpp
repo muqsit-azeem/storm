@@ -167,6 +167,7 @@ bool IterativePolicySearch<ValueType>::initialize(uint64_t k) {
             for (uint64_t a = 0; a < pomdp.getNumberOfChoices(statesForObservation.front()) - 1; ++a) {
                 for (uint64_t b = a + 1; b < pomdp.getNumberOfChoices(statesForObservation.front()); ++b) {
                     smtSolver->add(!(actionSelectionVarExpressions[obs][a]) || !(actionSelectionVarExpressions[obs][b]));
+                    // in case of deterministic strategies: if a is selected, b is not selected
                 }
             }
         }
@@ -177,31 +178,31 @@ bool IterativePolicySearch<ValueType>::initialize(uint64_t k) {
     for (auto const& actionVars : actionSelectionVarExpressions) {
         std::vector<storm::expressions::Expression> actExprs = actionVars;
         actExprs.push_back(followVarExpressions[obs]);
-        smtSolver->add(storm::expressions::disjunction(actExprs));
+        smtSolver->add(storm::expressions::disjunction(actExprs));  // at least one action is selected (2b)
         for (auto const& av : actionVars) {
-            smtSolver->add(!followVarExpressions[obs] || !av);
+            smtSolver->add(!followVarExpressions[obs] || !av); // if follow is selected, no action is selected
         }
         ++obs;
     }
 
     // Update at least one observation.
     // PAPER COMMENT: 2
-    smtSolver->add(storm::expressions::disjunction(observationUpdatedExpressions));
+    smtSolver->add(storm::expressions::disjunction(observationUpdatedExpressions)); // at least one observation is updated (6a)
 
     // PAPER COMMENT: 3
     if (lookaheadConstraintsRequired) {
         if (options.pathVariableType == MemlessSearchPathVariables::BooleanRanking) {
             for (uint64_t state = 0; state < pomdp.getNumberOfStates(); ++state) {
                 if (targetStates.get(state)) {
-                    smtSolver->add(pathVarExpressions[state][0]);
+                    smtSolver->add(pathVarExpressions[state][0]); // target states are reached in 0 steps
                 } else {
-                    smtSolver->add(!pathVarExpressions[state][0] || followVarExpressions[pomdp.getObservation(state)]);
+                    smtSolver->add(!pathVarExpressions[state][0] || followVarExpressions[pomdp.getObservation(state)]); // from non-target states, either you need to follow a memoryless strategy for multiple steps or you need to switch(?)
                 }
             }
         } else {
             for (uint64_t state = 0; state < pomdp.getNumberOfStates(); ++state) {
                 smtSolver->add(pathVarExpressions[state][0] <= expressionManager->integer(k));
-                smtSolver->add(pathVarExpressions[state][0] >= expressionManager->integer(0));
+                smtSolver->add(pathVarExpressions[state][0] >= expressionManager->integer(0)); // path length is between 0 and k
             }
         }
     }
@@ -213,8 +214,8 @@ bool IterativePolicySearch<ValueType>::initialize(uint64_t k) {
             continue;
         }
         for (uint64_t action = 0; action < pomdp.getNumberOfChoices(state); ++action) {
-            std::vector<storm::expressions::Expression> subexprreachSwitch;
-            std::vector<storm::expressions::Expression> subexprreachNoSwitch;
+            std::vector<storm::expressions::Expression> subexprreachSwitch; // formula 10?
+            std::vector<storm::expressions::Expression> subexprreachNoSwitch; // formula 9?
 
             subexprreachSwitch.push_back(!reachVarExpressions[state]);
             subexprreachSwitch.push_back(!actionSelectionVarExpressions[pomdp.getObservation(state)][action]);
@@ -227,7 +228,7 @@ bool IterativePolicySearch<ValueType>::initialize(uint64_t k) {
             subexprreachNoSwitch.push_back(followVarExpressions[pomdp.getObservation(state)]);
 
             for (auto const& entries : pomdp.getTransitionMatrix().getRow(rowindex)) {
-                if (!delayedSwitching || pomdp.getObservation(entries.getColumn()) != pomdp.getObservation(state)) {
+                if (!delayedSwitching || pomdp.getObservation(entries.getColumn()) != pomdp.getObservation(state)) { // delayed switching or next observation is different from current observation
                     subexprreachSwitch.push_back(continuationVarExpressions.at(entries.getColumn()));
                 } else {
                     // TODO: This could be the spot where delayed switching is broken.
@@ -247,22 +248,22 @@ bool IterativePolicySearch<ValueType>::initialize(uint64_t k) {
     rowindex = 0;
     for (uint64_t state = 0; state < pomdp.getNumberOfStates(); ++state) {
         if (surelyReachSinkStates.get(state)) {
-            smtSolver->add(!reachVarExpressions[state]);
-            smtSolver->add(!continuationVarExpressions[state]);
+            smtSolver->add(!reachVarExpressions[state]); // avoid states are not reached
+            smtSolver->add(!continuationVarExpressions[state]); // no shortcuts from avoid states
             if (lookaheadConstraintsRequired) {
                 if (options.pathVariableType == MemlessSearchPathVariables::BooleanRanking) {
                     for (uint64_t j = 1; j < k; ++j) {
-                        smtSolver->add(!pathVarExpressions[state][j]);
+                        smtSolver->add(!pathVarExpressions[state][j]); // there is no path from avoid to reach states
                     }
                 } else {
                     smtSolver->add(pathVarExpressions[state][0] == expressionManager->integer(k));
                 }
             }
             rowindex += pomdp.getNumberOfChoices(state);
-        } else if (!targetStates.get(state)) {
+        } else if (!targetStates.get(state)) { // non-target states: S_?
             if (lookaheadConstraintsRequired) {
                 if (options.pathVariableType == MemlessSearchPathVariables::BooleanRanking) {
-                    smtSolver->add(storm::expressions::implies(reachVarExpressions.at(state), pathVarExpressions.at(state).back()));
+                    smtSolver->add(storm::expressions::implies(reachVarExpressions.at(state), pathVarExpressions.at(state).back())); // if state is reached, then it is reached in k steps
                     std::vector<std::vector<std::vector<storm::expressions::Expression>>> pathsubsubexprs;
                     for (uint64_t j = 1; j < k; ++j) {
                         pathsubsubexprs.push_back(std::vector<std::vector<storm::expressions::Expression>>());
