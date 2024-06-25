@@ -149,6 +149,7 @@ struct InternalObservationScheduler {
                         ss << " " << choiceLabel;
                     }
                 }
+                ss << " (IsSwitchObservations(" << obs <<")"<<  switchObservations.get(obs)  << ") ";
                 if (switchObservations.get(obs)) {
                     ss << " and switch.";
                 }
@@ -168,7 +169,212 @@ struct InternalObservationScheduler {
             }
         }
     }
+
+    void exportObservationBasedSchedulersinFiles(const storage::sparse::StateValuations& obsValuations, const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, uint64_t hash, uint64_t schedulerId) const {
+        std::ofstream logFileObs(std::to_string(hash) + "_scheduler_switch0_memory" +  std::to_string(schedulerId) + ".scheduler"); // switch0 means before switch
+        std::ofstream logFileSwitch(std::to_string(hash) + "_scheduler_switch1_memory" + std::to_string(schedulerId) + ".scheduler"); // switch1 means after switch
+        std::ofstream logFileMemNoSwitch(std::to_string(hash) + "_mem_fun_" +  std::to_string(schedulerId) + ".fsc"); // switch0 means before switch
+        std::ofstream logFileMemSwitch(std::to_string(hash) + "_mem_fun_" + std::to_string(schedulerId) + ".fsc");
+        if (!logFileObs.is_open() || !logFileSwitch.is_open()) {
+            std::cerr << "Failed to open scheduler files" << std::endl;
+            return;
+        }
+        if (!logFileMemNoSwitch.is_open() || !logFileMemSwitch.is_open()) {
+            std::cerr << "Failed to open memory function files" << std::endl;
+            return;
+        }
+
+        for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+            std::stringstream ssNoSwitch;
+            std::stringstream ssWithSwitch;
+            std::stringstream ssMemFunNoSwitch;
+            std::stringstream ssMemFunWithSwitch;
+
+
+            if (observations.get(obs)) {
+                STORM_PRINT("Current considered observation: " << obs);
+                auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+                for (const auto& [obsName, obsVal] : obsInfo) {
+                    ssNoSwitch << obsVal << " ";
+//                    if (std::stoi(obsVal) == 0){
+//                        STORM_PRINT("here");
+//                    }
+//                    if (!observationsAfterSwitch.get(obs)) {
+//                        if (!switchObservations.get(obs)){
+//                            ssNoSwitch << obsVal << " ";
+//                            ssWithSwitch << obsVal << " ";
+//                            ssMemFunNoSwitch << obsVal << " ";
+//                        } else {
+//                            ssNoSwitch << obsVal << " ";
+//                            ssWithSwitch << obsVal << " ";
+//                            ssMemFunNoSwitch << obsVal << " ";
+//                        }
+//                    } else {
+//                            ssNoSwitch << obsVal << " ";
+//                            ssWithSwitch << obsVal << " ";
+//                            ssMemFunNoSwitch << obsVal << " ";
+//                    }
+                }
+
+                auto stateId = statesPerObservation[obs][0]; // assuming it is enough to look at the first state to get the correct action
+                for (auto act : actions[obs]) {
+                    uint_fast64_t rowIndex = choiceIndices[stateId] + act;
+                    auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
+                    for (const auto& choiceLabel : choiceLabels) {
+                        ssNoSwitch << choiceLabel;
+                        // ssWithSwitch << choiceLabel;
+
+//                        if (!observationsAfterSwitch.get(obs)) {
+//                            if (!switchObservations.get(obs)){
+//                                ssNoSwitch << choiceLabel;
+//                            }
+//                            else
+//                            {
+//                                    ssNoSwitch << choiceLabel << " ";
+//                            }
+//                        }
+//                        else
+//                            {
+//                                ssNoSwitch << choiceLabel << " ";
+//                        }
+                    }
+                }
+                ssNoSwitch << std::endl;
+                logFileObs << ssNoSwitch.str(); // Write to observation log file
+                logFileMemNoSwitch << ssMemFunNoSwitch.str() << schedulerRef[obs] << "->" << schedulerRef[obs] << std::endl;
+            }
+
+            if (observationsAfterSwitch.get(obs)) {
+                auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+                for (const auto& [obsName, obsVal] : obsInfo) {
+                    ssWithSwitch << obsVal << " ";
+                    // ssMemFunWithSwitch << obsVal << " ";
+                }
+                logFileSwitch << ssWithSwitch.str() << "0000000009SCH" << schedulerRef[obs] << std::endl;
+                // logFileMemSwitch << ssMemFunWithSwitch.str() << schedulerRef[obs] << "->" << schedulerId << std::endl;
+            }
+        }
+
+        // Close the file streams
+        logFileObs.close();
+        logFileSwitch.close();
+        logFileMemNoSwitch.close();
+        logFileSwitch.close();
+    }
+
+
+//
+
+//    void exportObservationBasedSchedulersinFiles(const storage::sparse::StateValuations& obsValuations, const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, uint64_t hash, uint64_t schedulerId) const {
+//        std::ofstream logFileObs(std::to_string(hash) + "_scheduler_switch0_memory" +  std::to_string(schedulerId) + ".scheduler"); // switch0 means before switch
+//        std::ofstream logFileSwitch(std::to_string(hash) + "_scheduler_switch1_memory" +  std::to_string(schedulerId) + ".scheduler"); // switch1 means after switch
+//        std::ofstream logFileMemNoSwitch(std::to_string(hash) + "_mem_fun_" +  std::to_string(schedulerId) + ".fsc"); // switch0 means before switch
+//        std::ofstream logFileMemSwitch(std::to_string(hash) + "_mem_fun_" + std::to_string(schedulerId) + ".fsc");
+//        std::ofstream mappingFile(std::to_string(hash) + "_action_mapping_ "+ std::to_string(schedulerId) + ".txt");
+//
+//        if (!logFileObs.is_open() || !logFileSwitch.is_open()) {
+//            std::cerr << "Failed to open scheduler files" << std::endl;
+//            return;
+//        }
+//        if (!logFileMemNoSwitch.is_open() || !logFileMemSwitch.is_open()) {
+//            std::cerr << "Failed to open memory function files" << std::endl;
+//            return;
+//        }
+//        if (!mappingFile.is_open()) {
+//            std::cerr << "Failed to open mapping file" << std::endl;
+//            return;
+//        }
+//
+//        std::map<std::string, int> actionMapping;
+//        int actionCounter = 0;
+//
+//        for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+//            std::stringstream ssNoSwitch;
+//            std::stringstream ssWithSwitch;
+//            std::stringstream ssWithAndNoSwitch;
+//            std::stringstream ssMemFunNoSwitch;
+//            std::stringstream ssMemFunWithSwitch;
+//
+//            if (observations.get(obs)) {
+//                // STORM_PRINT("Current considered observation: " << obs);
+//                auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+//                if (!switchObservations.get(obs)){
+//                    for (const auto& [obsName, obsVal] : obsInfo) {
+//                        ssWithAndNoSwitch << obsVal << " ";
+//                        ssNoSwitch << obsVal << " ";
+//                    }
+//
+//                    auto stateId = statesPerObservation[obs][0]; // assuming it is enough to look at the first state to get the correct action
+//                    for (auto act : actions[obs]) {
+//                        uint_fast64_t rowIndex = choiceIndices[stateId] + act;
+//                        auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
+//                        for (const auto& choiceLabel : choiceLabels) {
+//                            if (actionMapping.find(choiceLabel) == actionMapping.end()) {
+//                                actionMapping[choiceLabel] = actionCounter++;
+//                            }
+//                            int actionNumber = actionMapping[choiceLabel];
+//                            ssWithAndNoSwitch << actionNumber;
+//                            ssNoSwitch << actionNumber;
+//                        }
+//                    }
+//
+//                    ssWithAndNoSwitch << std::endl;
+//                    ssNoSwitch << std::endl;
+//
+//                    logFileObs << ssNoSwitch.str(); // Write to observation file
+//
+//                    // including the ss string to the file for switch as well
+//                    logFileSwitch << ssWithAndNoSwitch.str();
+//                }
+//                else {
+//                    for (const auto& [obsName, obsVal] : obsInfo) {
+//                        ssNoSwitch << obsVal << " ";
+//                    }
+//                    auto stateId = statesPerObservation[obs][0]; // assuming it is enough to look at the first state to get the correct action
+//                    for (auto act : actions[obs]) {
+//                        uint_fast64_t rowIndex = choiceIndices[stateId] + act;
+//                        auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
+//                        for (const auto& choiceLabel : choiceLabels) {
+//                            if (actionMapping.find(choiceLabel) == actionMapping.end()) {
+//                                actionMapping[choiceLabel] = actionCounter++;
+//                            }
+//                            int actionNumber = actionMapping[choiceLabel];
+//                            ssNoSwitch << actionNumber;
+//                        }
+//                    }
+//                    ssNoSwitch << std::endl;
+//                    std::string noSwitchStr = ssNoSwitch.str(); // Store the generated string for reuse
+//                    logFileObs << noSwitchStr; // Write to observation file
+//                    logFileMemNoSwitch << ssMemFunNoSwitch.str() << schedulerRef[obs] << "->" << schedulerRef[obs] << std::endl;
+//                }
+//            }
+//
+//            if (observationsAfterSwitch.get(obs)) {
+//                auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+//                for (const auto& [obsName, obsVal] : obsInfo) {
+//                    ssWithSwitch << obsVal << " ";
+//                }
+//                logFileSwitch << ssWithSwitch.str() << "0000000009SCH" << schedulerRef[obs] << std::endl;
+//            }
+//        }
+//
+//        // Export action mappings to the file
+//        for (const auto& [actionName, actionNumber] : actionMapping) {
+//            mappingFile << actionName << " " << actionNumber << std::endl;
+//        }
+//
+//        // Close the file streams
+//        logFileObs.close();
+//        logFileSwitch.close();
+//        logFileMemNoSwitch.close();
+//        logFileMemSwitch.close();
+//        mappingFile.close();
+//    }
+
+
 };
+
+
 
 template<typename ValueType>
 class IterativePolicySearch {
