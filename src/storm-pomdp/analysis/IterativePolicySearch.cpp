@@ -430,6 +430,10 @@ template<typename ValueType> std::string IterativePolicySearch<ValueType>::getAc
     return ss.str();
 }
 
+
+
+
+
 template<typename ValueType>
 bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVector const& oneOfTheseStates,
                                                storm::storage::BitVector const& allOfTheseStates) {
@@ -449,7 +453,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
     storm::storage::BitVector observationsWithPartialWinners(pomdp.getNrObservations());
 
     // preparation to print explainable strategy
-    auto const& obsValuations = pomdp.getObservationValuations();
+    auto const& obsValuations = pomdp.getObservationValuations(); //
     auto const& choiceLabeling = pomdp.getChoiceLabeling();
     auto const& choiceIndices = pomdp.getNondeterministicChoiceIndices();
 
@@ -583,6 +587,8 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
     storm::storage::BitVector uncoveredStates(pomdp.getNumberOfStates());
     storm::storage::BitVector coveredStates(pomdp.getNumberOfStates());
     storm::storage::BitVector coveredStatesAfterSwitch(pomdp.getNumberOfStates());
+    ObservationSchedulerMoore schedulerMoore;
+    std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler;
 
     stats.initializeSolverTimer.stop();
     STORM_LOG_INFO("Start iterative solver...");
@@ -750,10 +756,8 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         // generates info output, but here we only want it for debug level.
         // For consistency, all output on info level.
         STORM_PRINT("the scheduler: ");
+
         // scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
-        scheduler.exportObservationBasedSchedulers(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
-        scheduler.exportObservationBasedSchedulersinFiles(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, pomdp.hash(), stats.getIterations());
-//        }
 
         stats.winningRegionUpdatesTimer.start();
         storm::storage::BitVector updated(observations.size());
@@ -780,6 +784,9 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                             targetStates.set(state);
                             assert(!surelyReachSinkStates.get(state));
                         }
+                        if (winningObservationsFirstScheduler.find(observation) == winningObservationsFirstScheduler.end()) {
+                            winningObservationsFirstScheduler[observation] = stats.getIterations();
+                        }
                     }
                     updated.set(observation);
                     updateForObservationExpressions[observation] =
@@ -787,6 +794,12 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                 }
             }
         }
+        scheduler.exportObservationBasedSchedulers(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
+        //scheduler.exportObservationBasedSchedulersinFiles(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, pomdp.hash(), stats.getIterations());
+        schedulerMoore = scheduler.update_fsc_moore(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerMoore, stats.getIterations());
+        schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, pomdp.hash());
+
+
         stats.winningRegionUpdatesTimer.stop();
         if (foundWhatWeLookFor) {
             return true;

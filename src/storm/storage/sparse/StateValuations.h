@@ -105,7 +105,7 @@ class StateValuations : public storm::models::sparse::StateAnnotation {
     /*!
      * Returns a string representation of the valuation.
      *
-     * @param selectedVariables If given, only the informations for the variables in this set are processed.
+     * @param selectedVariables If given, only the information for the variables in this set are processed.
      * @return The string representation.
      */
     std::string toString(storm::storage::sparse::state_type const& stateIndex, bool pretty = true,
@@ -113,8 +113,8 @@ class StateValuations : public storm::models::sparse::StateAnnotation {
 
     /*!
      * Returns a a map representation of the valuation.
-     * inted to use for the observation as selected variables for expalainability
-     * @param selectedVariables If given, only the informations for the variables in this set are processed.
+     * intend to use for the observation as selected variables for explainability
+     * @param selectedVariables If given, only the information for the variables in this set are processed.
      * @return The string representation.
      */
     std::map<std::string, std::string> toMap(storm::storage::sparse::state_type const& stateIndex,
