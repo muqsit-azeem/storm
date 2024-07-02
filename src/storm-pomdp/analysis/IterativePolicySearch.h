@@ -76,100 +76,6 @@ struct ObservationSchedulerMoore {
         std::unordered_map<uint64_t, std::unordered_map<uint64_t , uint64_t>> nextMemoryTransition;
         // action selection function <memory, observation> -> action
         std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> actionSelection;
-
-        void exportMooreScheduler(ObservationSchedulerMoore schedulerMoore, const storage::sparse::StateValuations& obsValuations, uint64_t hash) const {
-            std::string folderName = std::to_string(hash);
-            std::string folderSchName = std::to_string(hash) + "/" + "schedulers";
-            std::filesystem::create_directory(folderName);
-            std::filesystem::create_directory(folderSchName);
-
-            std::ofstream logFSC(folderName + "/" + "mem_fun.fsc");
-            std::ofstream logActionMapping(folderName + "/" + "action_mapping.txt");
-
-            if (!logFSC.is_open() || !logActionMapping.is_open()) {
-                std::cerr << "Failed to open scheduler files" << std::endl;
-                return;
-            }
-
-            std::map<std::string, int> actionMapping;
-            int actionCounter = 0;
-
-            // Memory update function
-            for (const auto& [mem, nextMemFun] : schedulerMoore.nextMemoryTransition) {
-                for (const auto& [obs, nextMem] : nextMemFun) {
-                    std::stringstream ss;
-                    ss << mem;
-                    auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
-                    for (const auto& [obsName, obsVal] : obsInfo) {
-                        ss << "," << obsVal;
-                    }
-                    ss << " -> " << nextMem;
-                    logFSC << ss.str() << std::endl;
-                }
-            }
-
-            auto obsInfoSize = 0;
-            if (!obsValuations.isEmpty(0)) { // Assuming state_index 0 is valid; adjust as needed
-                auto obsInfo = obsValuations.getObsevationValuationforExplainability(0); // Assuming state_index 0
-                obsInfoSize = obsInfo.size();
-            }
-
-
-            // Observation based strategy
-            for (const auto& [mem, ObsAction] : schedulerMoore.actionSelection) {
-                // auto controllerFileName = folderName + "/" + "scheduler_" + std::to_string(mem) + ".csv";
-                auto controllerFileName = folderSchName + "/" + std::to_string(mem) + ".csv";
-                std::ofstream logSchedulerI(controllerFileName);
-                if (!logSchedulerI.is_open()) {
-                    std::cerr << "Failed to open scheduler file: " << controllerFileName << std::endl;
-                    continue;
-                }
-
-                int ObsActPairCounter = 0;
-                for (const auto& [obs, actDist] : ObsAction) {
-                    std::stringstream ss;
-                    // todo: completely remove the memory here because we know which memory location we are in
-                    if (!actDist.empty()) {
-                        auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
-                        ss << mem;
-                        for (const auto& [obsName, obsVal] : obsInfo) {
-                            ss << "," << obsVal;
-                        }
-                        ss << ",";
-                        for (const auto& act : actDist) {
-                            if (actionMapping.find(act) == actionMapping.end()) {
-                                actionMapping[act] = actionCounter++;
-                            }
-                            int actionNumber = actionMapping[act];
-                            ss << actionNumber;
-                            ObsActPairCounter++;
-                        }
-                        logSchedulerI << ss.str() << std::endl;
-                    }
-                }
-
-                // Prepending the metadata to the scheduler file
-                std::ifstream fileIn(controllerFileName); // Open the file for reading
-                std::stringstream data;
-                data << fileIn.rdbuf(); // Read the file
-                std::ofstream controllerFile(controllerFileName); // Open the file for writing (clears the content)
-                controllerFile << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize << " 1" << std::endl << data.str(); // Write the data to the file
-                logSchedulerI.close();
-                controllerFile.close();
-
-                // Run dtcontrol on the generated controller file
-                std::string command = "source ./venv/bin/activate && dtcontrol --input " + controllerFileName + " --output stdout:dot";
-                STORM_PRINT("Running command: " << command);
-                if (std::system(command.c_str()) != 0) {
-                    std::cerr << "Failed to run dtcontrol on file. Is it installed? " << controllerFileName << std::endl;
-                }
-            }
-
-            // Export action mappings to the file
-            for (const auto& [actionName, actionNumber] : actionMapping) {
-                logActionMapping << actionName << " <-> " << actionNumber << std::endl;
-            }
-        }
 };
 
 struct InternalObservationScheduler {
@@ -693,6 +599,8 @@ class IterativePolicySearch {
     uint64_t getOffsetFromObservation(uint64_t state, uint64_t observation) const;
 
     void printAllValuation() const;
+
+    void exportMooreScheduler(ObservationSchedulerMoore schedulerMoore, const storage::sparse::StateValuations& obsValuations, uint64_t hash);
 
     bool analyze(uint64_t k, storm::storage::BitVector const& oneOfTheseStates,
                  storm::storage::BitVector const& allOfTheseStates = storm::storage::BitVector());
