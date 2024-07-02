@@ -110,6 +110,7 @@ struct ObservationSchedulerMoore {
                     std::cerr << "Failed to open scheduler files" << std::endl;
                     return;
                 }
+                int ObsActPairCounter = 0;
                 for (const auto& [obs, actDist] : ObsAction) {
                     std::stringstream ss;
                     // todo: completely remove the memory here because we know which memory location we are in
@@ -119,17 +120,28 @@ struct ObservationSchedulerMoore {
                         for (const auto& [obsName, obsVal] : obsInfo) {
                             ss<< "," << obsVal;
                         }
-                        ss << " -> ";
+                        //ss << " -> ";
+                        ss << ",";
                         for (const auto& act : actDist) {
                             if (actionMapping.find(act) == actionMapping.end()) {
                                 actionMapping[act] = actionCounter++;
                             }
                             int actionNumber = actionMapping[act];
-                            ss << act <<"="<< actionNumber << " ";
+                            // ss << act <<"="<< actionNumber << " ";
+                            ss << actionNumber;
+                            ObsActPairCounter++;
                         }
                         logSchedulerI << ss.str() << std::endl;
                     }
                 }
+                /// prepending the metadata to the scheduler file
+                std::ifstream fileIn(std::to_string(hash) + "_scheduler_" + std::to_string(mem) + ".csv"); // Open the file for reading
+                std::stringstream data;
+                data << fileIn.rdbuf(); // Read the file
+
+                std::ofstream controllerFile(std::to_string(hash) + "_scheduler_" + std::to_string(mem) + ".csv"); // Open the file for writing (clears the content)
+                controllerFile << "#NON-PERMISSIVE" << std::endl << "BEGIN " << ObsActPairCounter << " 1" << std::endl << data.str(); // Write the data to the file
+                logSchedulerI.close();
             }
             // Export action mappings to the file
             for (const auto& [actionName, actionNumber] : actionMapping) {

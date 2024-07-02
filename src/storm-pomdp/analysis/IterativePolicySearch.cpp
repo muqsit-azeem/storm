@@ -798,8 +798,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         //scheduler.exportObservationBasedSchedulersinFiles(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, pomdp.hash(), stats.getIterations());
         schedulerMoore = scheduler.update_fsc_moore(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerMoore, stats.getIterations());
         schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, pomdp.hash());
-
-
+        
         stats.winningRegionUpdatesTimer.stop();
         if (foundWhatWeLookFor) {
             return true;
