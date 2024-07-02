@@ -188,6 +188,7 @@ void performQualitativeAnalysis(std::shared_ptr<storm::models::sparse::Pomdp<Val
                     STORM_PRINT_AND_LOG("From initial state, one may not almost-surely reach the target.");
                 }
             }
+            // TODO:: print winning observations
 
             if (qualSettings.isPrintWinningRegionSet()) {
                 search.getLastWinningRegion().print();
