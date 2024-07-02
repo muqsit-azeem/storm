@@ -148,17 +148,18 @@ struct ObservationSchedulerMoore {
                     }
                 }
 
-                // Prepending the metadata to the scheduler file
+                /// Prepending the metadata to the scheduler file
+                //todo: with the new fix we can move this before the loop and make it more efficient
                 std::ifstream fileIn(controllerFileName); // Open the file for reading
                 std::stringstream data;
                 data << fileIn.rdbuf(); // Read the file
                 std::ofstream controllerFile(controllerFileName); // Open the file for writing (clears the content)
-                controllerFile << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize << " 1" << std::endl << data.str(); // Write the data to the file
+                controllerFile << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl << data.str(); // Write the data to the file
                 logSchedulerI.close();
                 controllerFile.close();
 
-                // Run dtcontrol on the generated controller file
-                std::string command = "source ./venv/bin/activate && dtcontrol --input " + controllerFileName + " --output stdout:dot";
+                /// Run dtcontrol on the generated controller file
+                std::string command = "source ./venv/bin/activate && dtcontrol --input " + controllerFileName;
                 STORM_PRINT("Running command: " << command);
                 if (std::system(command.c_str()) != 0) {
                     std::cerr << "Failed to run dtcontrol on file. Is it installed? " << controllerFileName << std::endl;

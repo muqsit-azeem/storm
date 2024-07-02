@@ -432,9 +432,6 @@ template<typename ValueType> std::string IterativePolicySearch<ValueType>::getAc
 }
 
 
-
-
-
 template<typename ValueType>
 bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVector const& oneOfTheseStates,
                                                storm::storage::BitVector const& allOfTheseStates) {
@@ -798,7 +795,6 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         scheduler.exportObservationBasedSchedulers(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
         //scheduler.exportObservationBasedSchedulersinFiles(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, pomdp.hash(), stats.getIterations());
         schedulerMoore = scheduler.update_fsc_moore(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerMoore, stats.getIterations());
-        schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, pomdp.hash());
         
         stats.winningRegionUpdatesTimer.stop();
         if (foundWhatWeLookFor) {
@@ -955,6 +951,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             }
         }
     }
+    schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, pomdp.hash());
     return true;
 }
 
