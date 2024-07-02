@@ -158,6 +158,7 @@ struct ObservationSchedulerMoore {
                 logSchedulerI.close();
                 controllerFile.close();
 
+                ///
                 /// Run dtcontrol on the generated controller file
                 std::string command = "source ./venv/bin/activate && dtcontrol --input " + controllerFileName;
                 STORM_PRINT("Running command: " << command);
