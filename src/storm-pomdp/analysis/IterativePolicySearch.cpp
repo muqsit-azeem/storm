@@ -709,13 +709,12 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                 smtSolver->add(schedulerVariableExpressions[obs] == expressionManager->integer(scheduler.schedulerRef[obs]));
             }
 
-            if (options.computeTraceOutput()) {
-//                 generates debug output, but here we only want it for trace level.
-//                 For consistency, all output on debug level.
-                STORM_PRINT("the scheduler so far: ");
-
-            // scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
-            }
+//            if (options.computeTraceOutput()) {
+////              generates debug output, but here we only want it for trace level.
+////              For consistency, all output on debug level.
+//                STORM_PRINT("the scheduler so far: ");
+//                scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
+//            }
 
             if (foundWhatWeLookFor ||
                 (options.localIterationMaximum > 0 && (localIterations % (options.localIterationMaximum + 1) == options.localIterationMaximum))) {
@@ -751,11 +750,12 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         std::stringstream strstr;
         coveredStatesToStream(strstr, ~coveredStates);
         STORM_PRINT(strstr.str());
+
         // generates info output, but here we only want it for debug level.
         // For consistency, all output on info level.
-        STORM_PRINT("the scheduler: ");
+        STORM_PRINT("the scheduler: " << std::endl);
 
-        // scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
+        scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
 
         stats.winningRegionUpdatesTimer.start();
         storm::storage::BitVector updated(observations.size());
@@ -792,8 +792,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                 }
             }
         }
-        scheduler.exportObservationBasedSchedulers(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
-        //scheduler.exportObservationBasedSchedulersinFiles(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, pomdp.hash(), stats.getIterations());
+        // update the FSC
         schedulerMoore = scheduler.update_fsc_moore(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerMoore, stats.getIterations());
         
         stats.winningRegionUpdatesTimer.stop();
