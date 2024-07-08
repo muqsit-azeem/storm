@@ -83,8 +83,10 @@ struct ObservationSchedulerMoore {
             std::filesystem::create_directory(folderName);
             std::filesystem::create_directory(folderSchName);
 
-            std::ofstream logFSC(folderName + "/" + "mem_fun.fsc");
+            std::ofstream logFSC(folderName + "/" + "mem_fun.dot");
             std::ofstream logActionMapping(folderName + "/" + "action_mapping.txt");
+            std::ofstream OrderObservations(folderName + "/" + "ordered_observations.txt");
+            bool writtenObservations = false; // check if observations are written
 
             if (!logFSC.is_open() || !logActionMapping.is_open()) {
                 std::cerr << "Failed to open scheduler files" << std::endl;
@@ -94,22 +96,50 @@ struct ObservationSchedulerMoore {
             std::map<std::string, int> actionMapping;
             int actionCounter = 0;
 
-            // Memory update function
+            // Writing the DOT graph header
+            logFSC << "digraph MemoryTransitions {" << std::endl;
+
+            // Adding the initial state node
+            logFSC << "    \"initial\" [shape=point];" << std::endl;
+            logFSC << "    \"initial\" -> \"" << schedulerMoore.initialNode << "\";" << std::endl;
+            // A map to store grouped transitions
+            std::map<std::pair<int, int>, std::set<std::string>> groupedTransitions;
+
+            // Memory update
             for (const auto& [mem, nextMemFun] : schedulerMoore.nextMemoryTransition) {
                 for (const auto& [obs, nextMem] : nextMemFun) {
                     std::stringstream ss;
-                    ss << mem;
                     auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
                     for (const auto& [obsName, obsVal] : obsInfo) {
-                        ss << "," << obsVal;
+                        if (ss.tellp() > 0) ss << ", ";
+                        ss <<  obsName << "=" << obsVal;
+
+                        // write observation names once
+                        if (!writtenObservations) {
+                            OrderObservations << obsName << std::endl;
+                        }
                     }
-                    ss << " -> " << nextMem;
-                    logFSC << ss.str() << std::endl;
+                    groupedTransitions[{mem, nextMem}].insert(ss.str());
+                    writtenObservations = true;
                 }
             }
 
+            // Writing transitions to dot file
+            for (const auto& [nodes, labels] : groupedTransitions) {
+                const auto& [mem, nextMem] = nodes;
+                std::stringstream ss;
+                for (const auto& label : labels) {
+                    if (ss.tellp() > 0) ss << "; ";
+                    ss << label;
+                }
+                logFSC << "    \"" << mem << "\" -> \"" << nextMem << "\" [label=\"" << ss.str() << "\"];" << std::endl;
+            }
+            logFSC << "}" << std::endl;
+            logFSC.close();
+            STORM_PRINT("WRITING THE MEMORY FUNCTION FILE: " << folderName + "/" + "mem_fun.dot");
+
             auto obsInfoSize = 0;
-            if (!obsValuations.isEmpty(0)) { // Assuming state_index 0 is valid; adjust as needed
+            if (!obsValuations.isEmpty(0)) { // assuming state_index 0 is valid
                 auto obsInfo = obsValuations.getObsevationValuationforExplainability(0); // Assuming state_index 0
                 obsInfoSize = obsInfo.size();
             }
@@ -149,14 +179,15 @@ struct ObservationSchedulerMoore {
                     }
                 }
                 logSchedulerI.close();
+                STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName);
 
                 /// todo: run dtcontrol from script
-                /// Run dtcontrol on the generated controller file
-                std::string command = "source ./venv/bin/activate && dtcontrol --input " + controllerFileName;
-                STORM_PRINT("Running command: " << command);
-                if (std::system(command.c_str()) != 0) {
-                    std::cerr << "Failed to run dtcontrol on file. Is it installed? " << controllerFileName << std::endl;
-                }
+//                /// Run dtcontrol on the generated controller file
+//                std::string command = "source ./venv/bin/activate && dtcontrol --input " + controllerFileName;
+//                STORM_PRINT("Running command: " << command);
+//                if (std::system(command.c_str()) != 0) {
+//                    std::cerr << "Failed to run dtcontrol on file. Is it installed? " << controllerFileName << std::endl;
+//                }
             }
 
             // Export action mappings to the file
@@ -253,7 +284,6 @@ struct InternalObservationScheduler {
                 schedulerMoore.nextMemoryTransition[schedulerId][obs] = winningObservationsFirstScheduler[obs];
             }
         }
-
         if(isSwitch){
             // add or replicate transitions from the `primed-memory` function and action selection
             for (uint64_t obs = 0; obs < observations.size(); ++obs) {
