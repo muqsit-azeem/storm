@@ -84,17 +84,28 @@ struct ObservationSchedulerMoore {
             std::filesystem::create_directory(folderSchName);
 
             std::ofstream logFSC(folderName + "/" + "mem_fun.dot");
+            std::ofstream logFSCTransitionsForDT(folderName + "/" + "mem_fun.csv");
             std::ofstream logActionMapping(folderName + "/" + "action_mapping.txt");
             std::ofstream OrderObservations(folderName + "/" + "ordered_observations.txt");
             bool writtenObservations = false; // check if observations are written
 
-            if (!logFSC.is_open() || !logActionMapping.is_open()) {
+            if (!logFSC.is_open() || !logActionMapping.is_open() || !logFSCTransitionsForDT.is_open()) {
                 std::cerr << "Failed to open scheduler files" << std::endl;
                 return;
             }
 
             std::map<std::string, int> actionMapping;
             int actionCounter = 0;
+
+            auto obsInfoSize = 0;
+            if (!obsValuations.isEmpty(0)) { // assuming state_index 0 is valid
+                auto obsInfo = obsValuations.getObsevationValuationforExplainability(0); // Assuming state_index 0
+                obsInfoSize = obsInfo.size();
+            }
+
+            /// Prepending the metadata to the scheduler file
+            logFSCTransitionsForDT << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
+
 
             // Writing the DOT graph header
             logFSC << "digraph MemoryTransitions {" << std::endl;
@@ -109,20 +120,29 @@ struct ObservationSchedulerMoore {
             for (const auto& [mem, nextMemFun] : schedulerMoore.nextMemoryTransition) {
                 for (const auto& [obs, nextMem] : nextMemFun) {
                     std::stringstream ss;
+                    std::stringstream ssDTTransitions;
+                    // write source memory for DT transitions
+                    ssDTTransitions << mem << ",";
                     auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
                     for (const auto& [obsName, obsVal] : obsInfo) {
                         if (ss.tellp() > 0) ss << ", ";
                         ss <<  obsName << "=" << obsVal;
+                        // write observation values for DT transitions
+                        ssDTTransitions << obsVal << ",";
 
                         // write observation names once
                         if (!writtenObservations) {
                             OrderObservations << obsName << std::endl;
                         }
                     }
+                    // write destination memory for DT transitions
+                    ssDTTransitions << nextMem << std::endl;
+                    logFSCTransitionsForDT << ssDTTransitions.str();
                     groupedTransitions[{mem, nextMem}].insert(ss.str());
                     writtenObservations = true;
                 }
             }
+            logFSCTransitionsForDT.close();
 
             // Writing transitions to dot file
             for (const auto& [nodes, labels] : groupedTransitions) {
@@ -138,11 +158,6 @@ struct ObservationSchedulerMoore {
             logFSC.close();
             STORM_PRINT("WRITING THE MEMORY FUNCTION FILE: " << folderName + "/" + "mem_fun.dot");
 
-            auto obsInfoSize = 0;
-            if (!obsValuations.isEmpty(0)) { // assuming state_index 0 is valid
-                auto obsInfo = obsValuations.getObsevationValuationforExplainability(0); // Assuming state_index 0
-                obsInfoSize = obsInfo.size();
-            }
 
             // Observation based strategy
             for (const auto& [mem, ObsAction] : schedulerMoore.actionSelection) {
