@@ -80,8 +80,10 @@ struct ObservationSchedulerMoore {
         void exportMooreScheduler(ObservationSchedulerMoore schedulerMoore, const storage::sparse::StateValuations& obsValuations, uint64_t hash) const {
             std::string folderName = std::to_string(hash);
             std::string folderSchName = std::to_string(hash) + "/" + "schedulers";
+            std::string folderMemName = std::to_string(hash) + "/" + "memory-transitions";
             std::filesystem::create_directory(folderName);
             std::filesystem::create_directory(folderSchName);
+            std::filesystem::create_directory(folderMemName);
 
             std::ofstream logFSC(folderName + "/" + "mem_fun.dot");
             std::ofstream logFSCTransitionsForDT(folderName + "/" + "mem_fun.csv");
@@ -103,9 +105,8 @@ struct ObservationSchedulerMoore {
                 obsInfoSize = obsInfo.size();
             }
 
-            /// Prepending the metadata to the scheduler file
+            // Prepending the metadata to the scheduler file
             logFSCTransitionsForDT << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
-
 
             // Writing the DOT graph header
             logFSC << "digraph MemoryTransitions {" << std::endl;
@@ -156,7 +157,7 @@ struct ObservationSchedulerMoore {
             }
             logFSC << "}" << std::endl;
             logFSC.close();
-            STORM_PRINT("WRITING THE MEMORY FUNCTION FILE: " << folderName + "/" + "mem_fun.dot");
+            STORM_PRINT("WRITING THE MEMORY FUNCTION FILE: " << folderName + "/" + "mem_fun.dot" << std::endl);
 
 
             // Observation based strategy
@@ -168,11 +169,11 @@ struct ObservationSchedulerMoore {
                     std::cerr << "Failed to open scheduler file: " << controllerFileName << std::endl;
                     continue;
                 }
-                /// Prepending the metadata to the scheduler file
+                // Prepending the metadata to the scheduler file
                 logSchedulerI << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
-
                 int ObsActPairCounter = 0;
                 for (const auto& [obs, actDist] : ObsAction) {
+                    // std::stringstream ssMem;
                     std::stringstream ss;
                     // todo: completely remove the memory here because we know which memory location we are in
                     if (!actDist.empty()) {
@@ -191,18 +192,43 @@ struct ObservationSchedulerMoore {
                             ObsActPairCounter++;
                         }
                         logSchedulerI << ss.str() << std::endl;
+                        // auto it = schedulerMoore.nextMemoryTransition.find(mem)->second;
                     }
                 }
                 logSchedulerI.close();
-                STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName);
+                STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName<< " for memory: " << mem << std::endl);
+            }
 
-                /// todo: run dtcontrol from script
-//                /// Run dtcontrol on the generated controller file
-//                std::string command = "source ./venv/bin/activate && dtcontrol --input " + controllerFileName;
-//                STORM_PRINT("Running command: " << command);
-//                if (std::system(command.c_str()) != 0) {
-//                    std::cerr << "Failed to run dtcontrol on file. Is it installed? " << controllerFileName << std::endl;
-//                }
+
+            // memory-state transition-file
+            for (const auto& [mem, ObsNextMem] : schedulerMoore.nextMemoryTransition) {
+                // memory-state transition-file
+                auto memoryTrasitionsFileName = folderMemName + "/" + std::to_string(mem) + ".csv";
+                // memory-state transition-file
+                std::ofstream logMemoryTransitionsI(memoryTrasitionsFileName);
+                if (!logMemoryTransitionsI.is_open()) {
+                    std::cerr << "Failed to open scheduler file: " << memoryTrasitionsFileName << std::endl;
+                    continue;
+                }
+                // metadata to the memory transitions file
+                logMemoryTransitionsI << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
+                int ObsActPairCounter = 0;
+                for (const auto& [obs, nextMem] : ObsNextMem) {
+                    if (!ObsNextMem.empty()) {
+                        std::stringstream ss;
+                        auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+                        ss << mem;
+                        for (const auto& [obsName, obsVal] : obsInfo) {
+                            // write observation values for DT transitions
+                            ss << "," << obsVal;
+                        }
+                        ss << ",";
+                        ss << nextMem;
+                        logMemoryTransitionsI << ss.str() << std::endl;
+                    }
+                }
+                logMemoryTransitionsI.close();
+                STORM_PRINT("WRITING THE Memory FILE: " << memoryTrasitionsFileName<< " for memory: " << mem << std::endl);
             }
 
             // Export action mappings to the file
