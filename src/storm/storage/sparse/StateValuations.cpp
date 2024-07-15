@@ -242,7 +242,8 @@ std::map<std::string, std::string> StateValuations::toMap(storm::storage::sparse
         std::stringstream stream;
         std::string varName = valIt.getName();
         if (valIt.isBoolean()) {
-            stream << std::boolalpha << valIt.getBooleanValue() << std::noboolalpha;
+            // writes the boolean value true as 1 and false as 0
+            stream << valIt.getBooleanValue();
         } else if (valIt.isInteger()) {
             stream << valIt.getIntegerValue();
         } else if (valIt.isRational()) {
