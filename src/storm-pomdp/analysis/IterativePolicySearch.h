@@ -171,7 +171,6 @@ struct ObservationSchedulerMoore {
                 }
                 // Prepending the metadata to the scheduler file
                 logSchedulerI << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
-                int ObsActPairCounter = 0;
                 for (const auto& [obs, actDist] : ObsAction) {
                     // std::stringstream ssMem;
                     std::stringstream ss;
@@ -189,7 +188,6 @@ struct ObservationSchedulerMoore {
                             }
                             int actionNumber = actionMapping[act];
                             ss << actionNumber;
-                            ObsActPairCounter++;
                         }
                         logSchedulerI << ss.str() << std::endl;
                         // auto it = schedulerMoore.nextMemoryTransition.find(mem)->second;
@@ -212,7 +210,6 @@ struct ObservationSchedulerMoore {
                 }
                 // metadata to the memory transitions file
                 logMemoryTransitionsI << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
-                int ObsActPairCounter = 0;
                 for (const auto& [obs, nextMem] : ObsNextMem) {
                     if (!ObsNextMem.empty()) {
                         std::stringstream ss;
