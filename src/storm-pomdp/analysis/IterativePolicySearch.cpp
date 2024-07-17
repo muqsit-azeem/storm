@@ -634,7 +634,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             uint64_t obs = 0;
             for (auto const& ov : observationUpdatedVariables) {
                 if (!observationUpdated.get(obs) && model->getBooleanValue(ov)) {
-                    STORM_PRINT(std::endl<< "New observation updated: " << obs << std::endl);
+                    STORM_LOG_DEBUG(std::endl<< "New observation updated: " << obs << std::endl);
                     observationUpdated.set(obs);
                 }
                 obs++;
@@ -645,7 +645,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                 auto const& rv = reachVars[i];
                 auto const& rvExpr = reachVarExpressions[i];
                 if (observationUpdated.get(pomdp.getObservation(i)) && model->getBooleanValue(rv)) {
-                    STORM_PRINT(std::endl << "New covered state: " << i << std::endl);
+                    STORM_LOG_DEBUG(std::endl << "New covered state: " << i << std::endl);
                     smtSolver->add(rvExpr);
                     assert(!surelyReachSinkStates.get(i));
                     newObservations.set(pomdp.getObservation(i));
@@ -772,9 +772,9 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
                 ++i;
             }
             if (!update.empty()) {
-                STORM_PRINT("Update Winning Region: Observation " << observation << " with update " << update << std::endl);
+                STORM_LOG_DEBUG("Update Winning Region: Observation " << observation << " with update " << update << std::endl);
                 bool updateResult = winningRegion.update(observation, update);
-                STORM_PRINT("Region changed:" << updateResult << std::endl);
+                STORM_LOG_DEBUG("Region changed:" << updateResult << std::endl);
                 if (updateResult) {
                     if (winningRegion.observationIsWinning(observation)) {
                         ++newTargetObservations;
@@ -883,10 +883,10 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         uint64_t obs = 0;
         for (auto const& statesForObservation : statesPerObservation) {
             if (observations.get(obs) && updated.get(obs)) {
-                STORM_PRINT(std::endl<< "We have a new policy ( " << finalSchedulers.size() << " ) for states with observation " << obs << "."<<std::endl);
+                STORM_LOG_DEBUG(std::endl<< "We have a new policy ( " << finalSchedulers.size() << " ) for states with observation " << obs << "."<<std::endl);
                 assert(schedulerForObs.size() > obs);
                 (schedulerForObs[obs])++;
-                STORM_PRINT("We now have " << schedulerForObs[obs] << " policies for states with observation " << obs);
+                STORM_LOG_DEBUG("We now have " << schedulerForObs[obs] << " policies for states with observation " << obs);
                 if (winningRegion.observationIsWinning(obs)) {
                     for (auto const& state : statesForObservation) {
                         smtSolver->add(reachVarExpressions[state]);
@@ -995,7 +995,7 @@ bool IterativePolicySearch<ValueType>::smtCheck(uint64_t iteration, std::set<sto
         storm::utility::closeFile(filestream);
     }
 
-    STORM_PRINT("Call to SMT Solver (" << iteration << ")");
+    STORM_LOG_DEBUG("Call to SMT Solver (" << iteration << ")");
     storm::solver::SmtSolver::CheckResult result;
     stats.smtCheckTimer.start();
     if (assumptions.empty()) {
@@ -1007,15 +1007,15 @@ bool IterativePolicySearch<ValueType>::smtCheck(uint64_t iteration, std::set<sto
     stats.incrementSmtChecks();
 
     if (result == storm::solver::SmtSolver::CheckResult::Unknown) {
-        STORM_PRINT("Unknown");
+        STORM_LOG_DEBUG("Unknown");
         return false;
     } else if (result == storm::solver::SmtSolver::CheckResult::Unsat) {
-        STORM_PRINT("Unsatisfiable!");
+        STORM_LOG_DEBUG("Unsatisfiable!");
         return false;
     }
 
-    STORM_PRINT("Satisfying assignment: ");
-    STORM_PRINT(smtSolver->getModelAsValuation().toString(true));
+    STORM_LOG_DEBUG("Satisfying assignment: ");
+    STORM_LOG_DEBUG(smtSolver->getModelAsValuation().toString(true));
     return true;
 }
 
