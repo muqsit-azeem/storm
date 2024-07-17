@@ -124,7 +124,7 @@ struct ObservationSchedulerMoore {
             logFSC << "digraph MemoryTransitions {" << std::endl;
 
             // Adding the initial state node
-            logFSC << "    \"initial\" [shape=point];" << std::endl;
+            logFSC << "    \"initial\" [shape=point, width=0];" << std::endl;
             logFSC << "    \"initial\" -> \"" << schedulerMoore.initialNode << "\";" << std::endl;
             // A map to store grouped transitions
             std::map<std::pair<int, int>, std::set<std::string>> groupedTransitions;
@@ -295,6 +295,7 @@ struct InternalObservationScheduler {
     }
 
     ObservationSchedulerMoore update_fsc_moore(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler ,ObservationSchedulerMoore schedulerMoore, uint64_t schedulerId) const {
+        STORM_PRINT("SCHEDULER ID: " << schedulerId << std::endl    );
         int primeMemoryOffset = 1000000000;
         bool isSwitch = false;
         // find-out if we have to transition to the switch state
@@ -355,7 +356,7 @@ struct InternalObservationScheduler {
             }
 
             if (observationsAfterSwitch.get(obs)) {
-                schedulerMoore.nextMemoryTransition[schedulerId+primeMemoryOffset][obs] = schedulerRef[obs];
+                schedulerMoore.nextMemoryTransition[schedulerId][obs] = schedulerRef[obs];
                 // Print the memory transitions
                 STORM_PRINT("THE NEW MEMORY FUNCTION for observationsAfterSwitch: " << std::endl);
                 for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
