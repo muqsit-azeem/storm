@@ -11,16 +11,16 @@ void printRelevantInfoFromModel(std::shared_ptr<storm::solver::SmtSolver::ModelR
                                 std::vector<storm::expressions::Variable> const& reachVars, std::vector<storm::expressions::Variable> const& continuationVars) {
     uint64_t i = 0;
     std::stringstream ss;
-    STORM_PRINT("states which we have now: ");
+    STORM_LOG_DEBUG("states which we have now: ");
     for (auto const& rv : reachVars) {
         if (model->getBooleanValue(rv)) {
             ss << " " << i;
         }
         ++i;
     }
-    STORM_PRINT(ss.str());
+    STORM_LOG_DEBUG(ss.str());
     i = 0;
-    STORM_PRINT("states from which we continue: ");
+    STORM_LOG_DEBUG("states from which we continue: ");
     std::stringstream ss2;
     for (auto const& rv : continuationVars) {
         if (model->getBooleanValue(rv)) {
@@ -28,7 +28,7 @@ void printRelevantInfoFromModel(std::shared_ptr<storm::solver::SmtSolver::ModelR
         }
         ++i;
     }
-    STORM_PRINT(ss2.str());
+    STORM_LOG_DEBUG(ss2.str());
 }
 }  // namespace detail
 
@@ -761,7 +761,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         storm::storage::BitVector updated(observations.size());
         uint64_t newTargetObservations = 0;
         for (uint64_t observation = 0; observation < pomdp.getNrObservations(); ++observation) {
-            STORM_PRINT("consider observation " << observation << std::endl);
+            STORM_LOG_DEBUG("consider observation " << observation << std::endl);
             storm::storage::BitVector update(statesPerObservation[observation].size());
             uint64_t i = 0;
             for (uint64_t state : statesPerObservation[observation]) {

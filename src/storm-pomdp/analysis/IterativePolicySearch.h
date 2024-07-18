@@ -78,18 +78,18 @@ struct ObservationSchedulerMoore {
         std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> actionSelection;
 
         void exportMooreScheduler(ObservationSchedulerMoore schedulerMoore, const storage::sparse::StateValuations& obsValuations, uint64_t hash) const {
-            STORM_PRINT("THE FINAL MEMORY FUNCTION: " << std::endl);
-            for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
-                uint64_t memory = outerPair.first;
-                const auto& transitions = outerPair.second;
-                for (const auto& innerPair : transitions) {
-                    uint64_t observation = innerPair.first;
-                    uint64_t nextMemory = innerPair.second;
-                    STORM_PRINT("Memory: " << memory
-                                           << ", Observation: " << observation
-                                           << ", Next Memory: " << nextMemory << std::endl);
-                }
-            }
+//            STORM_PRINT("THE FINAL MEMORY FUNCTION: " << std::endl);
+//            for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
+//                uint64_t memory = outerPair.first;
+//                const auto& transitions = outerPair.second;
+//                for (const auto& innerPair : transitions) {
+//                    uint64_t observation = innerPair.first;
+//                    uint64_t nextMemory = innerPair.second;
+//                    STORM_PRINT("Memory: " << memory
+//                                           << ", Observation: " << observation
+//                                           << ", Next Memory: " << nextMemory << std::endl);
+//                }
+//            }
             std::string folderName = std::to_string(hash);
             std::string folderSchName = std::to_string(hash) + "/" + "schedulers";
             std::string folderMemName = std::to_string(hash) + "/" + "memory-transitions";
@@ -230,7 +230,7 @@ struct ObservationSchedulerMoore {
                         for (const auto& [obsName, obsVal] : obsInfo) {
                             // write observation values for DT transitions
                             ss << "," << obsVal;
-                            STORM_PRINT("OBSINFO: " << obs << ", name=val: "<< obsName << " = " << obsVal << std::endl);
+                            // STORM_PRINT("OBSINFO: " << obs << ", name=val: "<< obsName << " = " << obsVal << std::endl);
                         }
                         ss << ",";
                         ss << nextMem;
@@ -295,8 +295,10 @@ struct InternalObservationScheduler {
     }
 
     ObservationSchedulerMoore update_fsc_moore(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler ,ObservationSchedulerMoore schedulerMoore, uint64_t schedulerId) const {
-        STORM_PRINT("SCHEDULER ID: " << schedulerId << std::endl    );
+        // STORM_PRINT("SCHEDULER ID: " << schedulerId << std::endl    );
         int primeMemoryOffset = 1000000000;
+        int primeSchedulerId = primeMemoryOffset + schedulerId;
+
         bool isSwitch = false;
         // find-out if we have to transition to the switch state
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
@@ -317,118 +319,41 @@ struct InternalObservationScheduler {
                     }
                 }
                 if (!switchObservations.get(obs)){
-
                     schedulerMoore.nextMemoryTransition[schedulerId][obs] = schedulerId;
                     schedulerMoore.actionSelection[schedulerId][obs] = actionVector;
-                    // Print the memory transitions
-                    STORM_PRINT("THE NEW MEMORY FUNCTION for NOTswitchObservations: " << std::endl);
-                    for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
-                        uint64_t memory = outerPair.first;
-                        const auto& transitions = outerPair.second;
-                        for (const auto& innerPair : transitions) {
-                            uint64_t observation = innerPair.first;
-                            uint64_t nextMemory = innerPair.second;
-                            STORM_PRINT("Memory: " << memory
-                                                   << ", Observation: " << observation
-                                                   << ", Next Memory: " << nextMemory << std::endl);
-                        }
-                    }
                 }
                 else {
                     // isSwitch = true;
-                    schedulerMoore.nextMemoryTransition[schedulerId][obs] = primeMemoryOffset + schedulerId;
-                    STORM_PRINT("SchID: "<< schedulerId << ", Obs: " << obs << " PrimeMemory: " << primeMemoryOffset + schedulerId << std::endl);
-                    schedulerMoore.actionSelection[primeMemoryOffset+schedulerId][obs] = actionVector;
-                    // Print the memory transitions
-                    STORM_PRINT("THE NEW MEMORY FUNCTION for switchObservations: " << std::endl);
-                    for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
-                        uint64_t memory = outerPair.first;
-                        const auto& transitions = outerPair.second;
-                        for (const auto& innerPair : transitions) {
-                            uint64_t observation = innerPair.first;
-                            uint64_t nextMemory = innerPair.second;
-                            STORM_PRINT("Memory: " << memory
-                                                   << ", Observation: " << observation
-                                                   << ", Next Memory: " << nextMemory << std::endl);
-                        }
-                    }
+                    schedulerMoore.nextMemoryTransition[schedulerId][obs] = primeSchedulerId;
+                    schedulerMoore.actionSelection[primeSchedulerId][obs] = actionVector;
                 }
             }
 
-            if (observationsAfterSwitch.get(obs)) {
-                schedulerMoore.nextMemoryTransition[schedulerId][obs] = schedulerRef[obs];
-                // Print the memory transitions
-                STORM_PRINT("THE NEW MEMORY FUNCTION for observationsAfterSwitch: " << std::endl);
-                for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
-                    uint64_t memory = outerPair.first;
-                    const auto& transitions = outerPair.second;
-                    for (const auto& innerPair : transitions) {
-                        uint64_t observation = innerPair.first;
-                        uint64_t nextMemory = innerPair.second;
-                        STORM_PRINT("Memory: " << memory
-                                               << ", Observation: " << observation
-                                               << ", Next Memory: " << nextMemory << std::endl);
-                    }
-                }
+            if (observationsAfterSwitch.get(obs) && isSwitch) {
+                schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = schedulerRef[obs];
             }
             if (winningObservationsFirstScheduler.find(obs) != winningObservationsFirstScheduler.end() && winningObservationsFirstScheduler[obs] != schedulerId) {
                 schedulerMoore.nextMemoryTransition[schedulerId][obs] = winningObservationsFirstScheduler[obs];
-                // Print the memory transitions
-                STORM_PRINT("THE NEW MEMORY FUNCTION for WINNINGObservation: " << std::endl);
-                for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
-                    uint64_t memory = outerPair.first;
-                    const auto& transitions = outerPair.second;
-                    for (const auto& innerPair : transitions) {
-                        uint64_t observation = innerPair.first;
-                        uint64_t nextMemory = innerPair.second;
-                        STORM_PRINT("Memory: " << memory
-                                               << ", Observation: " << observation
-                                               << ", Next Memory: " << nextMemory << std::endl);
-                    }
-                }
+
             }
         }
         if(isSwitch){
-            // add or replicate transitions from the `primed-memory` function and action selection
+            // add or replicate transitions to the `primed-memory` function and action selection
             for (uint64_t obs = 0; obs < observations.size(); ++obs) {
-                // add or replicate transitions from the `primed-memory` function
+                // add or replicate transitions to the `primed-memory` function
                 if (schedulerMoore.nextMemoryTransition[schedulerId].find(obs) != schedulerMoore.nextMemoryTransition[schedulerId].end() &&
-                    schedulerMoore.nextMemoryTransition[primeMemoryOffset + schedulerId].find(obs) == schedulerMoore.nextMemoryTransition[primeMemoryOffset + schedulerId].end()){
+                    schedulerMoore.nextMemoryTransition[primeSchedulerId].find(obs) == schedulerMoore.nextMemoryTransition[primeSchedulerId].end()){
                     if (schedulerMoore.nextMemoryTransition[schedulerId][obs] == schedulerId) {
                         // Self-loop transition for non-offset memory location
-                        schedulerMoore.nextMemoryTransition[primeMemoryOffset + schedulerId][obs] = primeMemoryOffset + schedulerId;
-                        STORM_PRINT("THE NEW MEMORY FUNCTION for REPLACE selfLOOPs: " << std::endl);
-                        for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
-                            uint64_t memory = outerPair.first;
-                            const auto& transitions = outerPair.second;
-                            for (const auto& innerPair : transitions) {
-                                uint64_t observation = innerPair.first;
-                                uint64_t nextMemory = innerPair.second;
-                                STORM_PRINT("Memory: " << memory
-                                                       << ", Observation: " << observation
-                                                       << ", Next Memory: " << nextMemory << std::endl);
-                            }
-                        }
+                        schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = primeSchedulerId;
                     } else {
                         // Copy other transition
-                        schedulerMoore.nextMemoryTransition[primeMemoryOffset + schedulerId][obs] = schedulerMoore.nextMemoryTransition[schedulerId][obs];
-                        STORM_PRINT("THE NEW MEMORY FUNCTION for COPY transitions: " << std::endl);
-                        for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
-                            uint64_t memory = outerPair.first;
-                            const auto& transitions = outerPair.second;
-                            for (const auto& innerPair : transitions) {
-                                uint64_t observation = innerPair.first;
-                                uint64_t nextMemory = innerPair.second;
-                                STORM_PRINT("Memory: " << memory
-                                                       << ", Observation: " << observation
-                                                       << ", Next Memory: " << nextMemory << std::endl);
-                            }
-                        }
+                        schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = schedulerMoore.nextMemoryTransition[schedulerId][obs];
                     }
                 }
                 // replicate action selections for each memory and observation
-                if (schedulerMoore.actionSelection[primeMemoryOffset + schedulerId].find(obs) == schedulerMoore.actionSelection[primeMemoryOffset + schedulerId].end()){
-                    schedulerMoore.actionSelection[primeMemoryOffset + schedulerId][obs] = schedulerMoore.actionSelection[schedulerId][obs];
+                if (schedulerMoore.actionSelection[primeSchedulerId].find(obs) == schedulerMoore.actionSelection[primeSchedulerId].end()){
+                    schedulerMoore.actionSelection[primeSchedulerId][obs] = schedulerMoore.actionSelection[schedulerId][obs];
                 }
             }
         }
