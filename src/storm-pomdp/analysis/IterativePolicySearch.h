@@ -118,7 +118,7 @@ struct ObservationSchedulerMoore {
             }
 
             // Prepending the metadata to the scheduler file
-            logFSCTransitionsForDT << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
+            logFSCTransitionsForDT << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
 
             // Writing the DOT graph header
             logFSC << "digraph MemoryTransitions {" << std::endl;
@@ -157,6 +157,18 @@ struct ObservationSchedulerMoore {
             }
             logFSCTransitionsForDT.close();
 
+            // Check if the logFSCTransitionsForDT has less than or equal to 2 lines
+            std::ifstream checkFile(folderName + "/" + "mem_fun.csv");
+            std::string line;
+            int lineCount = 0;
+            while (std::getline(checkFile, line)) {
+                lineCount++;
+            }
+            if (lineCount <= 2) {
+                throw std::runtime_error("Error: mem_fun.csv has less than or equal to 2 lines.");
+            }
+            checkFile.close();
+
             // Writing transitions to dot file
             for (const auto& [nodes, labels] : groupedTransitions) {
                 const auto& [mem, nextMem] = nodes;
@@ -183,30 +195,61 @@ struct ObservationSchedulerMoore {
                     continue;
                 }
                 // Prepending the metadata to the scheduler file
-                logSchedulerI << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
+                logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
                 for (const auto& [obs, actDist] : ObsAction) {
                     // std::stringstream ssMem;
                     std::stringstream ss;
                     // todo: completely remove the memory here because we know which memory location we are in
                     if (!actDist.empty()) {
                         auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
-                        ss << mem;
-                        for (const auto& [obsName, obsVal] : obsInfo) {
-                            ss << "," << obsVal;
-                        }
-                        ss << ",";
-                        for (const auto& act : actDist) {
-                            if (actionMapping.find(act) == actionMapping.end()) {
-                                actionMapping[act] = actionCounter++;
+//                        ss << mem;
+//                        for (const auto& [obsName, obsVal] : obsInfo) {
+//                            ss << "," << obsVal;
+//                        }
+//                        ss << ",";
+                        // if (actDist.size() > 1) {
+                            // STORM_PRINT("Multiple actions for observation: " << obs << std::endl);
+                            for (const auto& act : actDist) {
+                                ss << mem;
+                                for (const auto& [obsName, obsVal] : obsInfo) {
+                                    ss << "," << obsVal;
+                                }
+                                ss << ",";
+                                if (actionMapping.find(act) == actionMapping.end()) {
+                                    actionMapping[act] = actionCounter++;
+                                }
+                                int actionNumber = actionMapping[act];
+                                // ss << act << ",";
+                                ss << actionNumber << std::endl;
                             }
-                            int actionNumber = actionMapping[act];
-                            ss << actionNumber;
-                        }
-                        logSchedulerI << ss.str() << std::endl;
+                        // }
+//                        else {
+//                            for (const auto& act : actDist) {
+//                                if (actionMapping.find(act) == actionMapping.end()) {
+//                                    actionMapping[act] = actionCounter++;
+//                                }
+//                                int actionNumber = actionMapping[act];
+//                                // todo:delete next line
+//                                ss << act << ",";
+//                                ss << actionNumber;
+//                            }
+//                        }
+                        logSchedulerI << ss.str();
                         // auto it = schedulerMoore.nextMemoryTransition.find(mem)->second;
                     }
                 }
                 logSchedulerI.close();
+
+                // Check if the logSchedulerI has less than or equal to 2 lines
+                checkFile.open(controllerFileName);
+                lineCount = 0;
+                while (std::getline(checkFile, line)) {
+                    lineCount++;
+                }
+                if (lineCount <= 2) {
+                    throw std::runtime_error("Error: " + controllerFileName + " has less than or equal to 2 lines.");
+                }
+                checkFile.close();
                 STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName<< " for memory: " << mem << std::endl);
             }
 
@@ -222,7 +265,7 @@ struct ObservationSchedulerMoore {
                     continue;
                 }
                 // metadata to the memory transitions file
-                logMemoryTransitionsI << "#NON-PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
+                logMemoryTransitionsI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
                 for (const auto& [obs, nextMem] : ObsNextMem) {
                     if (!ObsNextMem.empty()) {
                         std::stringstream ss;
@@ -239,6 +282,16 @@ struct ObservationSchedulerMoore {
                     }
                 }
                 logMemoryTransitionsI.close();
+                // Check if the logMemoryTransitionsI has less than or equal to 2 lines
+                checkFile.open(memoryTrasitionsFileName);
+                lineCount = 0;
+                while (std::getline(checkFile, line)) {
+                    lineCount++;
+                }
+                if (lineCount <= 2) {
+                    throw std::runtime_error("Error: " + memoryTrasitionsFileName + " has less than or equal to 2 lines.");
+                }
+                checkFile.close();
                 STORM_PRINT("WRITING THE Memory FILE: " << memoryTrasitionsFileName<< " for memory: " << mem << std::endl);
             }
 
