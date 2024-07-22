@@ -161,10 +161,11 @@ struct ObservationSchedulerMoore {
             for (const auto& [nodes, labels] : groupedTransitions) {
                 const auto& [mem, nextMem] = nodes;
                 std::stringstream ss;
-                for (const auto& label : labels) {
-                    if (ss.tellp() > 0) ss << "; ";
-                    ss << label;
-                }
+                //TODO: uncomment or use a different way od transition representation
+//                for (const auto& label : labels) {
+//                    if (ss.tellp() > 0) ss << "; ";
+//                    ss << label;
+//                }
                 logFSC << "    \"" << mem << "\" -> \"" << nextMem << "\" [label=\"" << ss.str() << "\"];" << std::endl;
             }
             logFSC << "}" << std::endl;
