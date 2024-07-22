@@ -379,9 +379,10 @@ struct InternalObservationScheduler {
                 else {
                     // isSwitch = true;
                     schedulerMoore.nextMemoryTransition[schedulerId][obs] = primeSchedulerId;
-                    //todo: check if the action selection is correct
-                    // schedulerMoore.actionSelection[primeSchedulerId][obs] = actionVector;
-                    schedulerMoore.actionSelection[schedulerId][obs] = actionVector;
+                    //todo: check if the action selection is correct here --
+                    // we want to switch to the prime scheduler and play instead of play and switch
+                    schedulerMoore.actionSelection[primeSchedulerId][obs] = actionVector;
+                    // schedulerMoore.actionSelection[schedulerId][obs] = actionVector;
                 }
             }
 
