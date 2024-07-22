@@ -257,11 +257,11 @@ struct ObservationSchedulerMoore {
             // memory-state transition-file
             for (const auto& [mem, ObsNextMem] : schedulerMoore.nextMemoryTransition) {
                 // memory-state transition-file
-                auto memoryTrasitionsFileName = folderMemName + "/" + std::to_string(mem) + ".csv";
+                auto memoryTransitionsFileName = folderMemName + "/" + std::to_string(mem) + ".csv";
                 // memory-state transition-file
-                std::ofstream logMemoryTransitionsI(memoryTrasitionsFileName);
+                std::ofstream logMemoryTransitionsI(memoryTransitionsFileName);
                 if (!logMemoryTransitionsI.is_open()) {
-                    std::cerr << "Failed to open scheduler file: " << memoryTrasitionsFileName << std::endl;
+                    std::cerr << "Failed to open scheduler file: " << memoryTransitionsFileName << std::endl;
                     continue;
                 }
                 // metadata to the memory transitions file
@@ -283,16 +283,16 @@ struct ObservationSchedulerMoore {
                 }
                 logMemoryTransitionsI.close();
                 // Check if the logMemoryTransitionsI has less than or equal to 2 lines
-                checkFile.open(memoryTrasitionsFileName);
+                checkFile.open(memoryTransitionsFileName);
                 lineCount = 0;
                 while (std::getline(checkFile, line)) {
                     lineCount++;
                 }
                 if (lineCount <= 2) {
-                    throw std::runtime_error("Error: " + memoryTrasitionsFileName + " has less than or equal to 2 lines.");
+                    throw std::runtime_error("Error: " + memoryTransitionsFileName + " has less than or equal to 2 lines.");
                 }
                 checkFile.close();
-                STORM_PRINT("WRITING THE Memory FILE: " << memoryTrasitionsFileName<< " for memory: " << mem << std::endl);
+                STORM_PRINT("WRITING THE Memory FILE: " << memoryTransitionsFileName<< " for memory: " << mem << std::endl);
             }
 
             // Export action mappings to the file
@@ -379,7 +379,9 @@ struct InternalObservationScheduler {
                 else {
                     // isSwitch = true;
                     schedulerMoore.nextMemoryTransition[schedulerId][obs] = primeSchedulerId;
-                    schedulerMoore.actionSelection[primeSchedulerId][obs] = actionVector;
+                    //todo: check if the action selection is correct
+                    // schedulerMoore.actionSelection[primeSchedulerId][obs] = actionVector;
+                    schedulerMoore.actionSelection[schedulerId][obs] = actionVector;
                 }
             }
 

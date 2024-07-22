@@ -753,7 +753,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
 
         // generates info output, but here we only want it for debug level.
         // For consistency, all output on info level.
-        STORM_PRINT("the scheduler: " << std::endl);
+        STORM_PRINT("the scheduler: " << finalSchedulers.size() << std::endl);
 
         scheduler.printForObservations(obsValuations, choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch);
 
