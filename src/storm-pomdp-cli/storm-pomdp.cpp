@@ -129,6 +129,7 @@ MemlessSearchOptions fillMemlessSearchOptionsFromSettings() {
     options.validateResult = qualSettings.validateFinalResult();
 
     options.pathVariableType = storm::pomdp::pathVariableTypeFromString(qualSettings.getLookaheadType());
+    options.setWinningRegionFileName(qualSettings.exportWinningRegionPath());
 
     if (qualSettings.isExportSATCallsSet()) {
         options.setExportSATCalls(qualSettings.getExportSATCallsPath());
