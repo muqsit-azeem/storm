@@ -1,6 +1,6 @@
 #include "storm-pomdp/analysis/IterativePolicySearch.h"
 #include "storm/io/file.h"
-
+#include "storm-pomdp-cli/settings/modules/QualitativePOMDPAnalysisSettings.h"
 #include "storm-pomdp/analysis/OneShotPolicySearch.h"
 #include "storm-pomdp/analysis/QualitativeAnalysis.h"
 #include "storm-pomdp/analysis/QualitativeAnalysisOnGraphs.h"
@@ -950,7 +950,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             }
         }
     }
-    schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, pomdp.hash());
+    schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, options.getWinningRegionFolder());
     return true;
 }
 
