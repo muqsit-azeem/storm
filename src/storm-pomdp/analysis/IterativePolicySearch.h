@@ -165,7 +165,7 @@ struct ObservationSchedulerMoore {
                 lineCount++;
             }
             if (lineCount <= 2) {
-                throw std::runtime_error("Error: mem_fun.csv has less than or equal to 2 lines.");
+                // throw std::runtime_error("Error: mem_fun.csv has less than or equal to 2 lines.");
             }
             checkFile.close();
 
@@ -247,7 +247,7 @@ struct ObservationSchedulerMoore {
                     lineCount++;
                 }
                 if (lineCount <= 2) {
-                    throw std::runtime_error("Error: " + controllerFileName + " has less than or equal to 2 lines.");
+                    // throw std::runtime_error("Error: " + controllerFileName + " has less than or equal to 2 lines.");
                 }
                 checkFile.close();
                 STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName<< " for memory: " << mem << std::endl);
@@ -289,7 +289,7 @@ struct ObservationSchedulerMoore {
                     lineCount++;
                 }
                 if (lineCount <= 2) {
-                    throw std::runtime_error("Error: " + memoryTransitionsFileName + " has less than or equal to 2 lines.");
+                    // throw std::runtime_error("Error: " + memoryTransitionsFileName + " has less than or equal to 2 lines.");
                 }
                 checkFile.close();
                 STORM_PRINT("WRITING THE Memory FILE: " << memoryTransitionsFileName<< " for memory: " << mem << std::endl);
