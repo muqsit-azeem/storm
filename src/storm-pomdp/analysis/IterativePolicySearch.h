@@ -55,6 +55,19 @@ class MemlessSearchOptions {
         return debugLevel > 2;
     }
 
+    std::string const& setWinningRegionFileName(std::string filename) {
+        winningRegionFileName = filename;
+        return winningRegionFileName;
+    }
+
+    std::string const& getWinningRegionFolder() const {
+        std::size_t lastDash = winningRegionFileName.find_last_of('-');
+        if (lastDash != std::string::npos) {
+            return winningRegionFileName.substr(0, lastDash);
+        }
+        return winningRegionFileName;
+    }
+
     bool onlyDeterministicStrategies = false;
     bool forceLookahead = false;
     bool validateEveryStep = false;
@@ -66,6 +79,7 @@ class MemlessSearchOptions {
 
    private:
     std::string exportSATcalls = "";
+    std::string winningRegionFileName = "";
     uint64_t debugLevel = 0;
 };
 
@@ -77,7 +91,7 @@ struct ObservationSchedulerMoore {
         // action selection function <memory, observation> -> action
         std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> actionSelection;
 
-        void exportMooreScheduler(ObservationSchedulerMoore schedulerMoore, const storage::sparse::StateValuations& obsValuations, uint64_t hash) const {
+        void exportMooreScheduler(ObservationSchedulerMoore schedulerMoore, const storage::sparse::StateValuations& obsValuations, std::string folderName) const {
 //            STORM_PRINT("THE FINAL MEMORY FUNCTION: " << std::endl);
 //            for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
 //                uint64_t memory = outerPair.first;
@@ -90,9 +104,10 @@ struct ObservationSchedulerMoore {
 //                                           << ", Next Memory: " << nextMemory << std::endl);
 //                }
 //            }
-            std::string folderName = std::to_string(hash);
-            std::string folderSchName = std::to_string(hash) + "/" + "schedulers";
-            std::string folderMemName = std::to_string(hash) + "/" + "memory-transitions";
+
+            // std::string folderName = folder;
+            std::string folderSchName = folderName + "/" + "schedulers";
+            std::string folderMemName = folderName + "/" + "memory-transitions";
             std::filesystem::create_directory(folderName);
             std::filesystem::create_directory(folderSchName);
             std::filesystem::create_directory(folderMemName);
