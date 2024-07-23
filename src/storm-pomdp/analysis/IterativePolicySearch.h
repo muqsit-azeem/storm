@@ -77,7 +77,7 @@ struct ObservationSchedulerMoore {
         // action selection function <memory, observation> -> action
         std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> actionSelection;
 
-        void exportMooreScheduler(ObservationSchedulerMoore schedulerMoore, const storage::sparse::StateValuations& obsValuations, uint64_t hash) const {
+        void exportMooreScheduler(ObservationSchedulerMoore schedulerMoore, const storage::sparse::StateValuations& obsValuations, const std::string filename) const {
 //            STORM_PRINT("THE FINAL MEMORY FUNCTION: " << std::endl);
 //            for (const auto& outerPair : schedulerMoore.nextMemoryTransition) {
 //                uint64_t memory = outerPair.first;
@@ -90,9 +90,9 @@ struct ObservationSchedulerMoore {
 //                                           << ", Next Memory: " << nextMemory << std::endl);
 //                }
 //            }
-            std::string folderName = std::to_string(hash);
-            std::string folderSchName = std::to_string(hash) + "/" + "schedulers";
-            std::string folderMemName = std::to_string(hash) + "/" + "memory-transitions";
+            std::string folderName = filename;
+            std::string folderSchName = folderName + "/" + "schedulers";
+            std::string folderMemName = folderName + "/" + "memory-transitions";
             std::filesystem::create_directory(folderName);
             std::filesystem::create_directory(folderSchName);
             std::filesystem::create_directory(folderMemName);

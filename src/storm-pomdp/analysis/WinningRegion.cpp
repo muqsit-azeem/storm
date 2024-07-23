@@ -310,6 +310,7 @@ uint64_t WinningRegion::getStorageSize() const {
 
 void WinningRegion::storeToFile(std::string const& path, std::string const& preamble, bool append) const {
     std::ofstream file;
+    STORM_PRINT_AND_LOG("Writing winning region to " << path);
     storm::utility::openFile(path, file, append);
     file << ":preamble\n";
     file << preamble << '\n';

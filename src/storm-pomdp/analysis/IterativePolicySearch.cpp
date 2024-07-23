@@ -1,6 +1,7 @@
 #include "storm-pomdp/analysis/IterativePolicySearch.h"
+#include "storm/settings/SettingsManager.h"
 #include "storm/io/file.h"
-
+#include "storm-pomdp-cli/settings/modules/QualitativePOMDPAnalysisSettings.h"
 #include "storm-pomdp/analysis/OneShotPolicySearch.h"
 #include "storm-pomdp/analysis/QualitativeAnalysis.h"
 #include "storm-pomdp/analysis/QualitativeAnalysisOnGraphs.h"
@@ -587,6 +588,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
     storm::storage::BitVector coveredStatesAfterSwitch(pomdp.getNumberOfStates());
     ObservationSchedulerMoore schedulerMoore;
     std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler;
+    auto const& qualSettings = storm::settings::getModule<storm::settings::modules::QualitativePOMDPAnalysisSettings>();
 
     stats.initializeSolverTimer.stop();
     STORM_LOG_INFO("Start iterative solver...");
@@ -950,7 +952,10 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             }
         }
     }
-    schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, pomdp.hash());
+
+    STORM_PRINT_AND_LOG("WinningREGIONPATH:" << qualSettings.exportWinningRegionPath());
+
+    schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, qualSettings.exportWinningRegionPath());
     return true;
 }
 
