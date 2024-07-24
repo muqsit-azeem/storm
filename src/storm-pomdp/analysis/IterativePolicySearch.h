@@ -110,7 +110,6 @@ struct ObservationSchedulerMoore {
 
             // std::string folderName = folder;
             std::string folderSchName = folderName + "/" + "schedulers";
-            STORM_PRINT_AND_LOG("FOLDER SCH NAME: " << folderSchName << std::endl);
             std::string folderMemName = folderName + "/" + "memory-transitions";
             std::filesystem::create_directory(folderName);
             std::filesystem::create_directory(folderSchName);

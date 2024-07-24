@@ -743,6 +743,21 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         if (!newSchedulerDiscovered) {
             break;
         }
+
+        //todo: This is the place to stop early for winning region computation when initial observations are in the winning region
+        // Check if all initial observations are in the winning region
+        bool allInitialObservationsWinning = true;
+        for (auto initialState : pomdp.getInitialStates()) {
+            uint64_t initialObservation = pomdp.getObservation(initialState);
+            if (!winningRegion.observationIsWinning(initialObservation)) {
+                allInitialObservationsWinning = false;
+                break;
+            }
+        }
+        if (allInitialObservationsWinning) {
+            STORM_PRINT_AND_LOG("All initial observations are in the winning region. Stopping the iterative solver.");
+            break;
+        }
         // smtSolver->unsetTimeout();
         smtSolver->pop();
 
