@@ -794,7 +794,35 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         }
         // update the FSC
         schedulerMoore = scheduler.update_fsc_moore(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerMoore, stats.getIterations());
-        
+
+//        if (pomdp.getInitialStates().getNumberOfSetBits() == 1) {
+//            uint64_t initialState = pomdp.getInitialStates().getNextSetIndex(0);
+//            uint64_t initialObservation = pomdp.getObservation(initialState);
+//            // TODO this is inefficient.
+//            uint64_t offset = 0;
+//            for (uint64_t state = 0; state < pomdp.getNumberOfStates(); ++state) {
+//                if (state == initialState) {
+//                    break;
+//                }
+//                if (pomdp.getObservation(state) == initialObservation) {
+//                    ++offset;
+//                }
+//            }
+//            storm::analysis::QualitativeAnalysisOnGraphs<ValueType> qualitativeAnalysis(pomdp);
+//            // After preprocessing, this might be done cheaper.
+//            storm::storage::BitVector surelyNotAlmostSurelyReachTarget = qualitativeAnalysis.analyseProbSmaller1(formula.asProbabilityOperatorFormula());
+//
+//            storm::pomdp::IterativePolicySearch<ValueType> search(pomdp, targetStates, surelyNotAlmostSurelyReachTarget, smtSolverFactory, options);
+//            if (search.getLastWinningRegion().isWinning(initialObservation, offset)) {
+//                STORM_PRINT_AND_LOG("Initial state is safe!\n");
+//            } else {
+//                STORM_PRINT_AND_LOG("Initial state may not be safe.\n");
+//            }
+//        } else {
+//            STORM_LOG_WARN("Output for multiple initial states is incomplete");
+//        }
+//
+//        search.getLastWinningRegion().isWinning(initialObservation, offset)
         stats.winningRegionUpdatesTimer.stop();
         if (foundWhatWeLookFor) {
             return true;

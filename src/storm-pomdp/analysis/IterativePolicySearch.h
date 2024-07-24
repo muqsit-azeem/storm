@@ -58,12 +58,12 @@ class MemlessSearchOptions {
         return debugLevel > 2;
     }
 
-    std::string const& setWinningRegionFileName(std::string filename) {
+    void setWinningRegionFileName(std::string filename) {
         winningRegionFileName = filename;
-        return winningRegionFileName;
+        // return winningRegionFileName;
     }
 
-    std::string const& getWinningRegionFolder() const {
+    std::string getWinningRegionFolder() const {
         std::size_t lastDash = winningRegionFileName.find_last_of('-');
         if (lastDash != std::string::npos) {
             return winningRegionFileName.substr(0, lastDash);
@@ -110,6 +110,7 @@ struct ObservationSchedulerMoore {
 
             // std::string folderName = folder;
             std::string folderSchName = folderName + "/" + "schedulers";
+            STORM_PRINT_AND_LOG("FOLDER SCH NAME: " << folderSchName << std::endl);
             std::string folderMemName = folderName + "/" + "memory-transitions";
             std::filesystem::create_directory(folderName);
             std::filesystem::create_directory(folderSchName);
