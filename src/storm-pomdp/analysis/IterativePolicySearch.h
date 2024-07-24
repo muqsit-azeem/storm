@@ -89,9 +89,9 @@ class MemlessSearchOptions {
 
 struct ObservationSchedulerMoore {
         uint64_t initialNode;
-        // next memory function <memory, observation> -> memory
+        // next memory function <memory -> <observation -> memory>>
         std::unordered_map<uint64_t, std::unordered_map<uint64_t , uint64_t>> nextMemoryTransition;
-        // action selection function <memory, observation> -> action
+        // action selection function <memory -> (observation -> action)
         std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> actionSelection;
 
         void exportMooreScheduler(ObservationSchedulerMoore schedulerMoore, const storage::sparse::StateValuations& obsValuations, std::string folderName) const {
@@ -192,10 +192,10 @@ struct ObservationSchedulerMoore {
                 const auto& [mem, nextMem] = nodes;
                 std::stringstream ss;
                 //TODO: uncomment or use a different way od transition representation
-//                for (const auto& label : labels) {
-//                    if (ss.tellp() > 0) ss << "; ";
-//                    ss << label;
-//                }
+                for (const auto& label : labels) {
+                    if (ss.tellp() > 0) ss << "; ";
+                    ss << label;
+                }
                 logFSC << "    \"" << mem << "\" -> \"" << nextMem << "\" [label=\"" << ss.str() << "\"];" << std::endl;
             }
             logFSC << "}" << std::endl;
@@ -379,6 +379,26 @@ struct InternalObservationScheduler {
             }
         }
 
+        //todo: figureout if isAllSwitch is same as Empty ActionSelection for the given memory location
+        // we should refactor to avoid code duplication
+        bool isAllSwitch = true;
+        for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+            auto stateId = statesPerObservation[obs][0];
+            // need to check the switch only for observations where actions are defined.
+            std::vector<std::string> actionVector;
+            for (auto act : actions[obs]) {
+                uint_fast64_t rowIndex = choiceIndices[stateId] + act;
+                auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
+                for (const auto& choiceLabel : choiceLabels) {
+                    actionVector.push_back(choiceLabel);
+                }
+            }
+            if (!switchObservations.get(obs) && !actionVector.empty()){
+                isAllSwitch = false;
+                break;
+            }
+        }
+
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
             std::vector<std::string> actionVector;
             if (observations.get(obs)) {
@@ -396,8 +416,8 @@ struct InternalObservationScheduler {
                 }
                 else {
                     // isSwitch = true;
-                    schedulerMoore.nextMemoryTransition[schedulerId][obs] = primeSchedulerId;
-                    //todo: check if the action selection is correct here --
+                    if (!isAllSwitch) schedulerMoore.nextMemoryTransition[schedulerId][obs] = primeSchedulerId;
+                    //todo: check if the action selection is correct here
                     // we want to switch to the prime scheduler and play instead of play and switch
                     schedulerMoore.actionSelection[primeSchedulerId][obs] = actionVector;
                     // schedulerMoore.actionSelection[schedulerId][obs] = actionVector;
@@ -405,11 +425,25 @@ struct InternalObservationScheduler {
             }
 
             if (observationsAfterSwitch.get(obs) && isSwitch) {
-                schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = schedulerRef[obs];
+                bool isRefferedSchedulerEmpty = true;
+                for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+                    if (schedulerMoore.actionSelection[schedulerRef[obs]].find(obs) != schedulerMoore.actionSelection[schedulerRef[obs]].end()){
+                        isRefferedSchedulerEmpty = false;
+                        break;
+                    }
+                }
+                if (isRefferedSchedulerEmpty) {
+                    STORM_PRINT_AND_LOG("No action selection for observation " << obs << " in scheduler " << schedulerRef[obs]
+                                                                               << ". Cannot switch to this scheduler.");
+                    schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = primeMemoryOffset + schedulerRef[obs];
+                    STORM_PRINT("Adding transition from " << primeSchedulerId << " to " << primeMemoryOffset + schedulerRef[obs] << " for observation " << obs);
+                }
+                else {
+                    schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = schedulerRef[obs];
+                }
             }
             if (winningObservationsFirstScheduler.find(obs) != winningObservationsFirstScheduler.end() && winningObservationsFirstScheduler[obs] != schedulerId) {
                 schedulerMoore.nextMemoryTransition[schedulerId][obs] = winningObservationsFirstScheduler[obs];
-
             }
         }
         if(isSwitch){
