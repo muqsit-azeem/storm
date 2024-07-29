@@ -142,7 +142,7 @@ struct ObservationSchedulerMoore {
             logFSC << "digraph MemoryTransitions {" << std::endl;
 
             // Adding the initial state node
-            logFSC << "    \"initial\" [shape=point, width=0];" << std::endl;
+            logFSC << "    \"initial\" [label=\"\", style=invis, width=0];" << std::endl;
             logFSC << "    \"initial\" -> \"" << schedulerMoore.initialNode << "\";" << std::endl;
             // A map to store grouped transitions
             std::map<std::pair<int, int>, std::set<std::string>> groupedTransitions;
