@@ -399,6 +399,26 @@ struct InternalObservationScheduler {
             }
         }
 
+        bool isNeedSwitchMemory= false;
+        for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+            auto stateId = statesPerObservation[obs][0];
+            // need to check the switch only for observations where actions are defined.
+            std::vector<std::string> actionVector;
+            for (auto act : actions[obs]) {
+                uint_fast64_t rowIndex = choiceIndices[stateId] + act;
+                auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
+                for (const auto& choiceLabel : choiceLabels) {
+                    actionVector.push_back(choiceLabel);
+                }
+            }
+            if (!actionVector.empty() && observationsAfterSwitch.get(obs)){
+                isNeedSwitchMemory = true;
+            }
+
+        }
+
+
+
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
             std::vector<std::string> actionVector;
             if (observations.get(obs)) {
@@ -411,8 +431,14 @@ struct InternalObservationScheduler {
                     }
                 }
                 if (!switchObservations.get(obs)){
-                    schedulerMoore.nextMemoryTransition[schedulerId][obs] = schedulerId;
-                    schedulerMoore.actionSelection[schedulerId][obs] = actionVector;
+                    if(isNeedSwitchMemory){
+                        schedulerMoore.nextMemoryTransition[schedulerId][obs] = schedulerId;
+                        schedulerMoore.actionSelection[schedulerId][obs] = actionVector;
+                    }
+                    else{
+                        schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = primeSchedulerId;
+                        schedulerMoore.actionSelection[primeSchedulerId][obs] = actionVector;
+                    }
                 }
                 else {
                     // isSwitch = true;
