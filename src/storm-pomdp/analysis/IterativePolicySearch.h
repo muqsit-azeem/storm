@@ -412,6 +412,7 @@ struct InternalObservationScheduler {
                 }
             }
             if (!actionVector.empty() && observationsAfterSwitch.get(obs)){
+                STORM_PRINT("NEED FOR SWITCH memory for observation " << obs << " in scheduler " << schedulerId << ".");
                 isNeedSwitchMemory = true;
             }
 
