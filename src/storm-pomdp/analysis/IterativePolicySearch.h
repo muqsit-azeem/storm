@@ -137,13 +137,25 @@ struct ObservationSchedulerPosteriorMealy {
 
         // Memory update
         for (const auto& [mem, nextMemFun] : schedulerMealy.nextMemoryTransition) {
-            for (const auto& [obs, nextMem] : nextMemFun) {
+            for (const auto& [obspair, nextMem] : nextMemFun) {
                 std::stringstream ss;
                 std::stringstream ssDTTransitions;
                 // write source memory for DT transitions
                 ssDTTransitions << mem << ",";
-                auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
-                for (const auto& [obsName, obsVal] : obsInfo) {
+                auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obspair.first);
+                auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obspair.second);
+                for (const auto& [obsName, obsVal] : obsInfo1) {
+                    if (ss.tellp() > 0) ss << ", ";
+                    ss <<  obsName << "\'=" << obsVal;
+                    // write observation values for DT transitions
+                    ssDTTransitions << obsVal << ",";
+
+                    // write observation names once
+                    if (!writtenObservations) {
+                        OrderObservations << obsName << "\'" << std::endl;
+                    }
+                }
+                for (const auto& [obsName, obsVal] : obsInfo2) {
                     if (ss.tellp() > 0) ss << ", ";
                     ss <<  obsName << "=" << obsVal;
                     // write observation values for DT transitions
