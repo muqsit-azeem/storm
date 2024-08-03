@@ -87,6 +87,16 @@ class MemlessSearchOptions {
 };
 
 
+
+struct ObservationSchedulerPosteriorMealy {
+    uint64_t initialNode;
+    // action selection function <memory -> (observation -> action)
+    std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> actionSelection;
+    // next memory function <memory -> <observation -> memory>>
+    std::map<uint64_t, std::map<std::pair<uint64_t, uint64_t> , uint64_t>> nextMemoryTransition;
+};
+
+
 struct ObservationSchedulerMoore {
         uint64_t initialNode;
         // next memory function <memory -> <observation -> memory>>
@@ -340,7 +350,7 @@ struct InternalObservationScheduler {
 
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
 
-            if (observations.get(obs)) {
+            if (observations.get(obs) ) {
                 auto obsInfo = obsValuations.getStateInfo(obs);
                 std::stringstream ss;
                 ss << "Observation = " << obsInfo <<  " | Storm internal id = " << obs << " | actions = ";
@@ -469,8 +479,56 @@ struct InternalObservationScheduler {
         schedulerMoore.initialNode = schedulerId;
         return schedulerMoore;
     }
-};
 
+
+
+
+
+    ObservationSchedulerPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler ,ObservationSchedulerPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId) const {
+        bool isSwitch = false;
+        // find-out if we have to transition to the switch state
+        for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+            if (switchObservations.get(obs)){
+                isSwitch = true;
+            }
+        }
+        for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+            std::vector<std::string> actionVector;
+            if (observations.get(obs)) {
+                auto stateId = statesPerObservation[obs][0]; // assuming it is enough to look at the first state to get the correct action
+                for (auto act : actions[obs]) {
+                    uint_fast64_t rowIndex = choiceIndices[stateId] + act;
+                    auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
+                    for (const auto& choiceLabel : choiceLabels) {
+                        actionVector.push_back(choiceLabel);
+                    }
+                }
+                schedulerPosteriorMealy.actionSelection[schedulerId][obs] = actionVector;
+                // todo: the first observation should be dont care, currently cross product for all
+                //  how to effectively represent this?
+                if(!observationsAfterSwitch.get(obs)){
+                    for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs) {
+                        if(observations.get(obs1)){
+                            std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
+                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerId;
+                        }
+                    }
+                }
+            }
+            // todo: if we somehow get the information to which posterior-observation a switch belongs to, we can avoid some of the transitions
+            // in the SMT encoding, either it's already there or we can add a new variable to extract this information
+            if (observationsAfterSwitch.get(obs)) {
+                for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+                    if (switchObservations.get(obs)) {
+                        schedulerPosteriorMealy.nextMemoryTransition[schedulerId][std::make_pair(obs, obs)] = schedulerRef[obs];
+                    }
+                }
+            }
+        }
+        schedulerPosteriorMealy.initialNode = schedulerId;
+        return schedulerPosteriorMealy;
+    }
+};
 
 
 template<typename ValueType>
