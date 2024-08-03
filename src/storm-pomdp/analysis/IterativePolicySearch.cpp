@@ -585,7 +585,8 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
     storm::storage::BitVector uncoveredStates(pomdp.getNumberOfStates());
     storm::storage::BitVector coveredStates(pomdp.getNumberOfStates());
     storm::storage::BitVector coveredStatesAfterSwitch(pomdp.getNumberOfStates());
-    ObservationSchedulerMoore schedulerMoore;
+    // ObservationSchedulerMoore schedulerMoore;
+    ObservationSchedulerPosteriorMealy schedulerPostMealy;
     std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler;
 
     stats.initializeSolverTimer.stop();
@@ -808,7 +809,8 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             }
         }
         // update the FSC
-        schedulerMoore = scheduler.update_fsc_moore(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerMoore, stats.getIterations());
+        // schedulerMoore = scheduler.update_fsc_moore(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerMoore, stats.getIterations());
+        schedulerPostMealy = scheduler.update_fsc_mealy(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerPostMealy, stats.getIterations());
 
 //        if (pomdp.getInitialStates().getNumberOfSetBits() == 1) {
 //            uint64_t initialState = pomdp.getInitialStates().getNextSetIndex(0);
@@ -993,7 +995,8 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             }
         }
     }
-    schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, options.getWinningRegionFolder());
+    // schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, options.getWinningRegionFolder());
+    schedulerPostMealy.exportPosteriorMealyScheduler(schedulerPostMealy, obsValuations, options.getWinningRegionFolder());
     return true;
 }
 

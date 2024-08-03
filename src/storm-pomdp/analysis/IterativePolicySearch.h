@@ -264,7 +264,6 @@ struct ObservationSchedulerPosteriorMealy {
                         ss << "," << obsVal;
                         // STORM_PRINT("OBSINFO: " << obs << ", name=val: "<< obsName << " = " << obsVal << std::endl);
                     }
-                    ss << ",";
                     for (const auto& [obsName, obsVal] : obsInfo2) {
                         ss << "," << obsVal;
                     }
