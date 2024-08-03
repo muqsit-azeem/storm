@@ -252,7 +252,7 @@ struct ObservationSchedulerPosteriorMealy {
                 continue;
             }
             // metadata to the memory transitions file
-            logMemoryTransitionsI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
+            logMemoryTransitionsI << "#PERMISSIVE" << std::endl << "BEGIN " << 2*obsInfoSize+1 << " 1" << std::endl;
             for (const auto& [obs, nextMem] : ObsNextMem) {
                 if (!ObsNextMem.empty()) {
                     std::stringstream ss;
