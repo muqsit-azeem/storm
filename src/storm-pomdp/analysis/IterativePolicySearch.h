@@ -716,7 +716,8 @@ struct InternalObservationScheduler {
                     // todo: if we somehow get the information to which posterior-observation a switch belongs to, we can avoid some of the transitions
                     // in the SMT encoding, either it's already there or we can add a new variable to extract this information
                     for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
-                        if (observations.get(obs1) && switchObservations.get(obs1)) {
+                        if (observations.get(obs1)) {
+                        //if (observations.get(obs1) && switchObservations.get(obs1)) {
                             std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
                             schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerRef[obs];
                         }
