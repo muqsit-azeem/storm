@@ -582,13 +582,13 @@ struct InternalObservationScheduler {
         bool isSwitch = false;
         // find-out if we have to transition to the switch state
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
-            if (switchObservations.get(obs)){
+            if (switchObservations.get(obs)) {
                 isSwitch = true;
             }
         }
 
-        //todo: figureout if isAllSwitch is same as Empty ActionSelection for the given memory location
-        // we should refactor to avoid code duplication
+        // todo: figureout if isAllSwitch is same as Empty ActionSelection for the given memory location
+        //  we should refactor to avoid code duplication
         bool isAllSwitch = true;
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
             auto stateId = statesPerObservation[obs][0];
@@ -601,7 +601,7 @@ struct InternalObservationScheduler {
                     actionVector.push_back(choiceLabel);
                 }
             }
-            if (!switchObservations.get(obs) && !actionVector.empty()){
+            if (!switchObservations.get(obs) && !actionVector.empty()) {
                 isAllSwitch = false;
                 break;
             }
@@ -610,7 +610,7 @@ struct InternalObservationScheduler {
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
             std::vector<std::string> actionVector;
             if (observations.get(obs)) {
-                auto stateId = statesPerObservation[obs][0]; // assuming it is enough to look at the first state to get the correct action
+                auto stateId = statesPerObservation[obs][0];  // assuming it is enough to look at the first state to get the correct action
                 for (auto act : actions[obs]) {
                     uint_fast64_t rowIndex = choiceIndices[stateId] + act;
                     auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
@@ -618,15 +618,15 @@ struct InternalObservationScheduler {
                         actionVector.push_back(choiceLabel);
                     }
                 }
-                if (!switchObservations.get(obs)){
+                if (!switchObservations.get(obs)) {
                     schedulerMoore.nextMemoryTransition[schedulerId][obs] = schedulerId;
                     schedulerMoore.actionSelection[schedulerId][obs] = actionVector;
-                }
-                else {
+                } else {
                     // isSwitch = true;
-                    if (!isAllSwitch) schedulerMoore.nextMemoryTransition[schedulerId][obs] = primeSchedulerId;
-                    //todo: check if the action selection is correct here
-                    // we want to switch to the prime scheduler and play instead of play and switch
+                    if (!isAllSwitch)
+                        schedulerMoore.nextMemoryTransition[schedulerId][obs] = primeSchedulerId;
+                    // todo: check if the action selection is correct here
+                    //  we want to switch to the prime scheduler and play instead of play and switch
                     schedulerMoore.actionSelection[primeSchedulerId][obs] = actionVector;
                     // schedulerMoore.actionSelection[schedulerId][obs] = actionVector;
                 }
@@ -635,7 +635,7 @@ struct InternalObservationScheduler {
             if (observationsAfterSwitch.get(obs) && isSwitch) {
                 bool isRefferedSchedulerEmpty = true;
                 for (uint64_t obs = 0; obs < observations.size(); ++obs) {
-                    if (schedulerMoore.actionSelection[schedulerRef[obs]].find(obs) != schedulerMoore.actionSelection[schedulerRef[obs]].end()){
+                    if (schedulerMoore.actionSelection[schedulerRef[obs]].find(obs) != schedulerMoore.actionSelection[schedulerRef[obs]].end()) {
                         isRefferedSchedulerEmpty = false;
                         break;
                     }
@@ -645,21 +645,21 @@ struct InternalObservationScheduler {
                                                                                << ". Cannot switch to this scheduler.");
                     schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = primeMemoryOffset + schedulerRef[obs];
                     STORM_PRINT("Adding transition from " << primeSchedulerId << " to " << primeMemoryOffset + schedulerRef[obs] << " for observation " << obs);
-                }
-                else {
+                } else {
                     schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = schedulerRef[obs];
                 }
             }
-            if (winningObservationsFirstScheduler.find(obs) != winningObservationsFirstScheduler.end() && winningObservationsFirstScheduler[obs] != schedulerId) {
+            if (winningObservationsFirstScheduler.find(obs) != winningObservationsFirstScheduler.end() &&
+                winningObservationsFirstScheduler[obs] != schedulerId) {
                 schedulerMoore.nextMemoryTransition[schedulerId][obs] = winningObservationsFirstScheduler[obs];
             }
         }
-        if(isSwitch){
+        if (isSwitch) {
             // add or replicate transitions to the `primed-memory` function and action selection
             for (uint64_t obs = 0; obs < observations.size(); ++obs) {
                 // add or replicate transitions to the `primed-memory` function
                 if (schedulerMoore.nextMemoryTransition[schedulerId].find(obs) != schedulerMoore.nextMemoryTransition[schedulerId].end() &&
-                    schedulerMoore.nextMemoryTransition[primeSchedulerId].find(obs) == schedulerMoore.nextMemoryTransition[primeSchedulerId].end()){
+                    schedulerMoore.nextMemoryTransition[primeSchedulerId].find(obs) == schedulerMoore.nextMemoryTransition[primeSchedulerId].end()) {
                     if (schedulerMoore.nextMemoryTransition[schedulerId][obs] == schedulerId) {
                         // Self-loop transition for non-offset memory location
                         schedulerMoore.nextMemoryTransition[primeSchedulerId][obs] = primeSchedulerId;
@@ -669,7 +669,7 @@ struct InternalObservationScheduler {
                     }
                 }
                 // replicate action selections for each memory and observation
-                if (schedulerMoore.actionSelection[primeSchedulerId].find(obs) == schedulerMoore.actionSelection[primeSchedulerId].end()){
+                if (schedulerMoore.actionSelection[primeSchedulerId].find(obs) == schedulerMoore.actionSelection[primeSchedulerId].end()) {
                     schedulerMoore.actionSelection[primeSchedulerId][obs] = schedulerMoore.actionSelection[schedulerId][obs];
                 }
             }
@@ -677,8 +677,6 @@ struct InternalObservationScheduler {
         schedulerMoore.initialNode = schedulerId;
         return schedulerMoore;
     }
-
-
 
 
 
@@ -728,7 +726,7 @@ struct InternalObservationScheduler {
                     for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
                         if(observations.get(obs1)){
                             std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
-                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerId;
+                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
                         }
                     }
                 }
