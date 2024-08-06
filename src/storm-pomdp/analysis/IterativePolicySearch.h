@@ -145,9 +145,8 @@ struct ObservationPolicyPosteriorMealy {
                 auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obspair.first);
                 auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obspair.second);
                 for (const auto& [obsName, obsVal] : obsInfo1) {
-                    if (ss.tellp() > 0) ss << ", ";
+                    // if (ss.tellp() > 0) ss << ", ";
                     // ss <<  obsName << "\'=" << obsVal;
-                    ss <<  obspair.first;
 
                     // write observation values for DT transitions
                     ssDTTransitions << obsVal << ",";
@@ -156,13 +155,11 @@ struct ObservationPolicyPosteriorMealy {
                     if (!writtenObservations) {
                         OrderObservations << obsName << std::endl;
                     }
-                    break;
                 }
+                ss <<  obspair.first << ",";
                 for (const auto& [obsName, obsVal] : obsInfo2) {
-                    if (ss.tellp() > 0) ss << ", ";
+                    // if (ss.tellp() > 0) ss << ", ";
                     // ss <<  obsName << "=" << obsVal;
-                    ss <<  obspair.second << "\'";
-
                     // write observation values for DT transitions
                     ssDTTransitions << obsVal << ",";
 
@@ -170,8 +167,8 @@ struct ObservationPolicyPosteriorMealy {
                     if (!writtenObservations) {
                         OrderObservations << obsName << "\'" << std::endl;
                     }
-                    break;
                 }
+                ss <<  obspair.second << "\'";
                 // write destination memory for DT transitions
                 ssDTTransitions << nextMem << std::endl;
                 logFSCTransitionsForDT << ssDTTransitions.str();
