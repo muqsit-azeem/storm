@@ -88,14 +88,14 @@ class MemlessSearchOptions {
 
 
 
-struct ObservationSchedulerPosteriorMealy {
+struct ObservationPolicyPosteriorMealy {
     uint64_t initialNode;
     // action selection function <memory -> (observation -> action)
     std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> actionSelection;
     // next memory function <memory -> <observation -> memory>>
     std::map<uint64_t, std::map<std::pair<uint64_t, uint64_t> , uint64_t>> nextMemoryTransition;
 
-    void exportPosteriorMealyScheduler(ObservationSchedulerPosteriorMealy schedulerMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName) const {
+    void exportPosteriorMealyPolicy(ObservationPolicyPosteriorMealy policyMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName) const {
 
         std::string folderSchName = folderName + "/" + "schedulers";
         std::string folderMemName = folderName + "/" + "memory-transitions";
@@ -131,12 +131,12 @@ struct ObservationSchedulerPosteriorMealy {
 
         // Adding the initial state node
         logFSC << "    \"initial\" [label=\"\", style=invis, width=0];" << std::endl;
-        logFSC << "    \"initial\" -> \"" << schedulerMealy.initialNode << "\";" << std::endl;
+        logFSC << "    \"initial\" -> \"" << policyMealy.initialNode << "\";" << std::endl;
         // A map to store grouped transitions
         std::map<std::pair<int, int>, std::set<std::string>> groupedTransitions;
 
         // Memory update
-        for (const auto& [mem, nextMemFun] : schedulerMealy.nextMemoryTransition) {
+        for (const auto& [mem, nextMemFun] : policyMealy.nextMemoryTransition) {
             for (const auto& [obspair, nextMem] : nextMemFun) {
                 std::stringstream ss;
                 std::stringstream ssDTTransitions;
@@ -152,7 +152,7 @@ struct ObservationSchedulerPosteriorMealy {
 
                     // write observation names once
                     if (!writtenObservations) {
-                        OrderObservations << obsName << "\'" << std::endl;
+                        OrderObservations << obsName << std::endl;
                     }
                 }
                 for (const auto& [obsName, obsVal] : obsInfo2) {
@@ -163,7 +163,7 @@ struct ObservationSchedulerPosteriorMealy {
 
                     // write observation names once
                     if (!writtenObservations) {
-                        OrderObservations << obsName << std::endl;
+                        OrderObservations << obsName << "\'" << std::endl;
                     }
                 }
                 // write destination memory for DT transitions
@@ -191,7 +191,7 @@ struct ObservationSchedulerPosteriorMealy {
         for (const auto& [nodes, labels] : groupedTransitions) {
             const auto& [mem, nextMem] = nodes;
             std::stringstream ss;
-            //TODO: uncomment or use a different way od transition representation
+            //TODO: uncomment or use a different way of transition representation
             for (const auto& label : labels) {
                 if (ss.tellp() > 0) ss << "; ";
                 ss << label;
@@ -204,7 +204,7 @@ struct ObservationSchedulerPosteriorMealy {
 
 
         // Observation based strategy
-        for (const auto& [mem, ObsAction] : schedulerMealy.actionSelection) {
+        for (const auto& [mem, ObsAction] : policyMealy.actionSelection) {
             // auto controllerFileName = folderName + "/" + "scheduler_" + std::to_string(mem) + ".csv";
             auto controllerFileName = folderSchName + "/" + std::to_string(mem) + ".csv";
             std::ofstream logSchedulerI(controllerFileName);
@@ -242,7 +242,7 @@ struct ObservationSchedulerPosteriorMealy {
 
 
         // memory-state transition-file
-        for (const auto& [mem, ObsNextMem] : schedulerMealy.nextMemoryTransition) {
+        for (const auto& [mem, ObsNextMem] : policyMealy.nextMemoryTransition) {
             // memory-state transition-file
             auto memoryTransitionsFileName = folderMemName + "/" + std::to_string(mem) + ".csv";
             // memory-state transition-file
@@ -678,9 +678,8 @@ struct InternalObservationScheduler {
         return schedulerMoore;
     }
 
-
-
-    ObservationSchedulerPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler ,ObservationSchedulerPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId) const {
+    ObservationPolicyPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler ,
+                                                     ObservationPolicyPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId) const {
         bool isSwitch = false;
         // find-out if we have to transition to the switch state
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {

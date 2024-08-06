@@ -586,7 +586,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
     storm::storage::BitVector coveredStates(pomdp.getNumberOfStates());
     storm::storage::BitVector coveredStatesAfterSwitch(pomdp.getNumberOfStates());
     // ObservationSchedulerMoore schedulerMoore;
-    ObservationSchedulerPosteriorMealy schedulerPostMealy;
+    ObservationPolicyPosteriorMealy schedulerPostMealy;
     std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler;
 
     stats.initializeSolverTimer.stop();
@@ -812,34 +812,6 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         // schedulerMoore = scheduler.update_fsc_moore(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerMoore, stats.getIterations());
         schedulerPostMealy = scheduler.update_fsc_mealy(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerPostMealy, stats.getIterations());
 
-//        if (pomdp.getInitialStates().getNumberOfSetBits() == 1) {
-//            uint64_t initialState = pomdp.getInitialStates().getNextSetIndex(0);
-//            uint64_t initialObservation = pomdp.getObservation(initialState);
-//            // TODO this is inefficient.
-//            uint64_t offset = 0;
-//            for (uint64_t state = 0; state < pomdp.getNumberOfStates(); ++state) {
-//                if (state == initialState) {
-//                    break;
-//                }
-//                if (pomdp.getObservation(state) == initialObservation) {
-//                    ++offset;
-//                }
-//            }
-//            storm::analysis::QualitativeAnalysisOnGraphs<ValueType> qualitativeAnalysis(pomdp);
-//            // After preprocessing, this might be done cheaper.
-//            storm::storage::BitVector surelyNotAlmostSurelyReachTarget = qualitativeAnalysis.analyseProbSmaller1(formula.asProbabilityOperatorFormula());
-//
-//            storm::pomdp::IterativePolicySearch<ValueType> search(pomdp, targetStates, surelyNotAlmostSurelyReachTarget, smtSolverFactory, options);
-//            if (search.getLastWinningRegion().isWinning(initialObservation, offset)) {
-//                STORM_PRINT_AND_LOG("Initial state is safe!\n");
-//            } else {
-//                STORM_PRINT_AND_LOG("Initial state may not be safe.\n");
-//            }
-//        } else {
-//            STORM_LOG_WARN("Output for multiple initial states is incomplete");
-//        }
-//
-//        search.getLastWinningRegion().isWinning(initialObservation, offset)
         stats.winningRegionUpdatesTimer.stop();
         if (foundWhatWeLookFor) {
             return true;
@@ -848,16 +820,16 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         // this was commented the final graph based analysis below
 
         if (newTargetObservations > 0) {
-            stats.graphSearchTime.start();
-            storm::analysis::QualitativeAnalysisOnGraphs<ValueType> graphanalysis(pomdp);
+//            stats.graphSearchTime.start();
+//            storm::analysis::QualitativeAnalysisOnGraphs<ValueType> graphanalysis(pomdp);
             uint64_t targetStatesBefore = targetStates.getNumberOfSetBits();
-//            STORM_PRINT("Target states before graph based analysis " << targetStates.getNumberOfSetBits());
+            STORM_PRINT("Target states before graph based analysis " << targetStates.getNumberOfSetBits());
 //            STORM_LOG_INFO("Target states before graph based analysis " << targetStates.getNumberOfSetBits());
 //            targetStates = graphanalysis.analyseProb1Max(~surelyReachSinkStates, targetStates);
             uint64_t targetStatesAfter = targetStates.getNumberOfSetBits();
             STORM_PRINT("Target states after graph based analysis " << targetStates.getNumberOfSetBits());
 //            STORM_LOG_INFO("Target states after graph based analysis " << targetStates.getNumberOfSetBits());
-            stats.graphSearchTime.stop();
+//            stats.graphSearchTime.stop();
             if (targetStatesAfter - targetStatesBefore > 0) {
                 stats.winningRegionUpdatesTimer.start();
                 storm::storage::BitVector potentialWinner(pomdp.getNrObservations());
@@ -996,7 +968,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         }
     }
     // schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, options.getWinningRegionFolder());
-    schedulerPostMealy.exportPosteriorMealyScheduler(schedulerPostMealy, obsValuations, options.getWinningRegionFolder());
+    schedulerPostMealy.exportPosteriorMealyPolicy(schedulerPostMealy, obsValuations, options.getWinningRegionFolder());
     return true;
 }
 
