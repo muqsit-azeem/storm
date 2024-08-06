@@ -146,7 +146,9 @@ struct ObservationPolicyPosteriorMealy {
                 auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obspair.second);
                 for (const auto& [obsName, obsVal] : obsInfo1) {
                     if (ss.tellp() > 0) ss << ", ";
-                    ss <<  obsName << "\'=" << obsVal;
+                    // ss <<  obsName << "\'=" << obsVal;
+                    ss <<  obspair.first;
+                    break;
                     // write observation values for DT transitions
                     ssDTTransitions << obsVal << ",";
 
@@ -157,7 +159,9 @@ struct ObservationPolicyPosteriorMealy {
                 }
                 for (const auto& [obsName, obsVal] : obsInfo2) {
                     if (ss.tellp() > 0) ss << ", ";
-                    ss <<  obsName << "=" << obsVal;
+                    // ss <<  obsName << "=" << obsVal;
+                    ss <<  obspair.second << "\'";
+                    break;
                     // write observation values for DT transitions
                     ssDTTransitions << obsVal << ",";
 
@@ -169,6 +173,7 @@ struct ObservationPolicyPosteriorMealy {
                 // write destination memory for DT transitions
                 ssDTTransitions << nextMem << std::endl;
                 logFSCTransitionsForDT << ssDTTransitions.str();
+                // groupedTransitions[{mem, nextMem}].insert(ss.str());
                 groupedTransitions[{mem, nextMem}].insert(ss.str());
                 writtenObservations = true;
             }
@@ -192,10 +197,10 @@ struct ObservationPolicyPosteriorMealy {
             const auto& [mem, nextMem] = nodes;
             std::stringstream ss;
             //TODO: uncomment or use a different way of transition representation
-//            for (const auto& label : labels) {
-//                if (ss.tellp() > 0) ss << "; ";
-//                ss << label;
-//            }
+            for (const auto& label : labels) {
+                if (ss.tellp() > 0) ss << "; ";
+                ss << label;
+            }
             logFSC << "    \"" << mem << "\" -> \"" << nextMem << "\" [label=\"" << ss.str() << "\"];" << std::endl;
         }
         logFSC << "}" << std::endl;
@@ -721,7 +726,6 @@ struct InternalObservationScheduler {
                     }
                 }
             }
-
             if (winningObservationsFirstScheduler.find(obs) != winningObservationsFirstScheduler.end() && winningObservationsFirstScheduler[obs] != schedulerId) {
                 for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
                     if(observations.get(obs1)){
