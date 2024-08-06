@@ -262,18 +262,21 @@ struct ObservationPolicyPosteriorMealy {
                     std::stringstream ss;
                     auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obs.first);
                     auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obs.second);
+                    STORM_LOG_INFO("Printing memory transitions for memory: " << mem << " and observation: " << obs.first << " and " << obs.second << " and next memory: " << nextMem);
                     ss << mem;
                     for (const auto& [obsName, obsVal] : obsInfo1) {
                         // write observation values for DT transitions
                         ss << "," << obsVal;
-                        // STORM_PRINT("OBSINFO: " << obs << ", name=val: "<< obsName << " = " << obsVal << std::endl);
+                        STORM_PRINT("OBSINFO: " << " name=val: "<< obsName << " = " << obsVal << std::endl);
                     }
                     for (const auto& [obsName, obsVal] : obsInfo2) {
                         ss << "," << obsVal;
+                        STORM_PRINT("OBSINFO: " << " name=val: "<< obsName << " = " << obsVal << std::endl);
                     }
                     ss << ",";
                     ss << nextMem;
                     logMemoryTransitionsI << ss.str() << std::endl;
+                    STORM_PRINT("Added string to memory transitions file: " << ss.str() << std::endl);
                 }
             }
             logMemoryTransitionsI.close();
