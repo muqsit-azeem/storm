@@ -265,7 +265,7 @@ struct ObservationPolicyPosteriorMealy {
                     if (mem == 2){
                         STORM_LOG_INFO("Printing memory transitions for memory: " << mem << " and observation: " << obs.first << " and " << obs.second << " and next memory: " << nextMem);
                     }
-                    ss << mem;
+                    ss << mem << ",OBS1:" << obs.first;
                     for (const auto& [obsName, obsVal] : obsInfo1) {
                         // write observation values for DT transitions
                         ss << "," << obsVal;
@@ -276,11 +276,11 @@ struct ObservationPolicyPosteriorMealy {
                     for (const auto& [obsName, obsVal] : obsInfo2) {
                         ss << "," << obsVal;
                         if (mem == 2) {
-                            STORM_PRINT("OBSINFO: " << " name=val: " << obsName << " = " << obsVal << std::endl);
+                            STORM_PRINT("OBSINFO: " << " name=val: " << obsName << "\' = " << obsVal << std::endl);
                         }
                     }
-                    ss << ",";
-                    ss << nextMem;
+                    ss << "," << " OBS2:" << obs.second << ",";
+                    ss << nextMem ;
                     logMemoryTransitionsI << ss.str() << std::endl;
                     if (mem == 2) {
                         STORM_PRINT("Added string to memory transitions file: " << ss.str() << std::endl);
