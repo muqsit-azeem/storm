@@ -192,10 +192,10 @@ struct ObservationPolicyPosteriorMealy {
             const auto& [mem, nextMem] = nodes;
             std::stringstream ss;
             //TODO: uncomment or use a different way of transition representation
-            for (const auto& label : labels) {
-                if (ss.tellp() > 0) ss << "; ";
-                ss << label;
-            }
+//            for (const auto& label : labels) {
+//                if (ss.tellp() > 0) ss << "; ";
+//                ss << label;
+//            }
             logFSC << "    \"" << mem << "\" -> \"" << nextMem << "\" [label=\"" << ss.str() << "\"];" << std::endl;
         }
         logFSC << "}" << std::endl;
@@ -720,17 +720,16 @@ struct InternalObservationScheduler {
                         }
                     }
                 }
+            }
 
-                if (winningObservationsFirstScheduler.find(obs) != winningObservationsFirstScheduler.end() && winningObservationsFirstScheduler[obs] != schedulerId) {
-                    for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
-                        if(observations.get(obs1)){
-                            std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
-                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
-                        }
+            if (winningObservationsFirstScheduler.find(obs) != winningObservationsFirstScheduler.end() && winningObservationsFirstScheduler[obs] != schedulerId) {
+                for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
+                    if(observations.get(obs1)){
+                        std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
+                        schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
                     }
                 }
             }
-
         }
         schedulerPosteriorMealy.initialNode = schedulerId;
         return schedulerPosteriorMealy;
