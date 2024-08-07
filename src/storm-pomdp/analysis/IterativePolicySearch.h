@@ -1,6 +1,7 @@
 #include <sstream>
 #include <vector>
 #include <filesystem>
+#include <queue>
 
 #include "storm/exceptions/UnexpectedException.h"
 #include "storm/models/sparse/Pomdp.h"
@@ -95,7 +96,40 @@ struct ObservationPolicyPosteriorMealy {
     // next memory function <memory -> <observation -> memory>>
     std::map<uint64_t, std::map<std::pair<uint64_t, uint64_t> , uint64_t>> nextMemoryTransition;
 
+
+    // function to get reachable nodes
+    std::set<uint64_t> getReachableNodes() const {
+        std::set<uint64_t> visited;
+        std::queue<uint64_t> queue;
+        visited.insert(initialNode);
+        queue.push(initialNode);
+
+        while (!queue.empty()) {
+            uint64_t current = queue.front();
+            queue.pop();
+
+            // check all transitions from the current node
+            if (nextMemoryTransition.find(current) != nextMemoryTransition.end()) {
+                for (const auto& [key, nextNode] : nextMemoryTransition.at(current)) {
+                    if (visited.find(nextNode) == visited.end()) {
+                        visited.insert(nextNode);
+                        queue.push(nextNode);
+                    }
+                }
+            }
+        }
+        return visited;
+    }
+
     void exportPosteriorMealyPolicy(ObservationPolicyPosteriorMealy policyMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName) const {
+
+        // get reachable memory nodes
+        std::set<uint64_t> reachableNodes = getReachableNodes();
+
+        STORM_PRINT("Reachable nodes: " << std::endl);
+        for (auto node : reachableNodes) {
+            STORM_PRINT(node << std::endl);
+        }
 
         std::string folderSchName = folderName + "/" + "schedulers";
         std::string folderMemName = folderName + "/" + "memory-transitions";
@@ -130,181 +164,204 @@ struct ObservationPolicyPosteriorMealy {
         logFSC << "digraph MemoryTransitions {" << std::endl;
 
         // Adding the initial state node
-        logFSC << "    \"initial\" [label=\"\", style=invis, width=0];" << std::endl;
+        logFSC << R"(    "initial" [label="", style=invis, width=0];)" << std::endl;
         logFSC << "    \"initial\" -> \"" << policyMealy.initialNode << "\";" << std::endl;
         // A map to store grouped transitions
         std::map<std::pair<int, int>, std::set<std::string>> groupedTransitions;
 
         // Memory update
         for (const auto& [mem, nextMemFun] : policyMealy.nextMemoryTransition) {
-            for (const auto& [obspair, nextMem] : nextMemFun) {
-                std::stringstream ss;
-                std::stringstream ssDTTransitions;
-                // write source memory for DT transitions
-                ssDTTransitions << mem << ",";
-                auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obspair.first);
-                auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obspair.second);
-                for (const auto& [obsName, obsVal] : obsInfo1) {
-                    // if (ss.tellp() > 0) ss << ", ";
-                    // ss <<  obsName << "\'=" << obsVal;
+            STORM_PRINT("Current Memory: " << mem << std::endl);
+            if (reachableNodes.find(mem) != reachableNodes.end()) {  // check if the memory is reachable
+                for (const auto& [obspair, nextMem] : nextMemFun) {
+                    STORM_PRINT("Next Memory: " << nextMem << std::endl);
+                    if (reachableNodes.find(nextMem) != reachableNodes.end()) {
+                        STORM_PRINT("Next Memory: " << nextMem << " is reachable." << std::endl);
+                        std::stringstream ss;
+                        std::stringstream ssDTTransitions;
+                        // write source memory for DT transitions
+                        ssDTTransitions << mem << ",";
+                        auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obspair.first);
+                        auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obspair.second);
+                        for (const auto& [obsName, obsVal] : obsInfo1) {
+                            // if (ss.tellp() > 0) ss << ", ";
+                            // ss <<  obsName << "\'=" << obsVal;
 
-                    // write observation values for DT transitions
-                    ssDTTransitions << obsVal << ",";
+                            // write observation values for DT transitions
+                            ssDTTransitions << obsVal << ",";
 
-                    // write observation names once
-                    if (!writtenObservations) {
-                        OrderObservations << obsName << std::endl;
+                            // write observation names once
+                            if (!writtenObservations) {
+                                OrderObservations << obsName << std::endl;
+                            }
+                        }
+                        ss << obspair.first << ",";
+                        for (const auto& [obsName, obsVal] : obsInfo2) {
+                            // if (ss.tellp() > 0) ss << ", ";
+                            // ss <<  obsName << "=" << obsVal;
+                            // write observation values for DT transitions
+                            ssDTTransitions << obsVal << ",";
+
+                            // write observation names once
+                            if (!writtenObservations) {
+                                OrderObservations << obsName << "\'" << std::endl;
+                            }
+                        }
+                        ss << obspair.second << "\'";
+                        // write destination memory for DT transitions
+                        ssDTTransitions << nextMem << std::endl;
+                        logFSCTransitionsForDT << ssDTTransitions.str();
+                        // groupedTransitions[{mem, nextMem}].insert(ss.str());
+                        groupedTransitions[{mem, nextMem}].insert(ss.str());
+                        STORM_PRINT("Inserted string to memory transitions file: " << ss.str() << std::endl
+                                                                                   << "From memory: " << mem << "To memory: " << nextMem << std::endl);
+                        writtenObservations = true;
+                    } else {
+                        STORM_PRINT("Next Memory: " << nextMem << " is not reachable." << std::endl);
                     }
                 }
-                ss <<  obspair.first << ",";
-                for (const auto& [obsName, obsVal] : obsInfo2) {
-                    // if (ss.tellp() > 0) ss << ", ";
-                    // ss <<  obsName << "=" << obsVal;
-                    // write observation values for DT transitions
-                    ssDTTransitions << obsVal << ",";
-
-                    // write observation names once
-                    if (!writtenObservations) {
-                        OrderObservations << obsName << "\'" << std::endl;
-                    }
-                }
-                ss <<  obspair.second << "\'";
-                // write destination memory for DT transitions
-                ssDTTransitions << nextMem << std::endl;
-                logFSCTransitionsForDT << ssDTTransitions.str();
-                // groupedTransitions[{mem, nextMem}].insert(ss.str());
-                groupedTransitions[{mem, nextMem}].insert(ss.str());
-                writtenObservations = true;
+            } else {
+                STORM_PRINT("Current Memory: " << mem << " is not reachable." << std::endl);
             }
         }
-        logFSCTransitionsForDT.close();
+            logFSCTransitionsForDT.close();
 
-        // Check if the logFSCTransitionsForDT has less than or equal to 2 lines
-        std::ifstream checkFile(folderName + "/" + "mem_fun.csv");
-        std::string line;
-        int lineCount = 0;
-        while (std::getline(checkFile, line)) {
-            lineCount++;
-        }
-        if (lineCount <= 2) {
-            // throw std::runtime_error("Error: mem_fun.csv has less than or equal to 2 lines.");
-        }
-        checkFile.close();
-
-        // Writing transitions to dot file
-        for (const auto& [nodes, labels] : groupedTransitions) {
-            const auto& [mem, nextMem] = nodes;
-            std::stringstream ss;
-            //TODO: uncomment or use a different way of transition representation
-            for (const auto& label : labels) {
-                if (ss.tellp() > 0) ss << "; ";
-                ss << label;
-            }
-            logFSC << "    \"" << mem << "\" -> \"" << nextMem << "\" [label=\"" << ss.str() << "\"];" << std::endl;
-        }
-        logFSC << "}" << std::endl;
-        logFSC.close();
-        STORM_PRINT("WRITING THE MEMORY FUNCTION FILE: " << folderName + "/" + "mem_fun.dot" << std::endl);
-
-
-        // Observation based strategy
-        for (const auto& [mem, ObsAction] : policyMealy.actionSelection) {
-            // auto controllerFileName = folderName + "/" + "scheduler_" + std::to_string(mem) + ".csv";
-            auto controllerFileName = folderSchName + "/" + std::to_string(mem) + ".csv";
-            std::ofstream logSchedulerI(controllerFileName);
-            if (!logSchedulerI.is_open()) {
-                std::cerr << "Failed to open scheduler file: " << controllerFileName << std::endl;
-                continue;
-            }
-            // Prepending the metadata to the scheduler file
-            logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
-            for (const auto& [obs, actDist] : ObsAction) {
-                // std::stringstream ssMem;
-                std::stringstream ss;
-                // todo: completely remove the memory here because we know which memory location we are in
-                if (!actDist.empty()) {
-                    auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
-                    for (const auto& act : actDist) {
-                        ss << mem;
-                        for (const auto& [obsName, obsVal] : obsInfo) {
-                            ss << "," << obsVal;
-                        }
-                        ss << ",";
-                        if (actionMapping.find(act) == actionMapping.end()) {
-                            actionMapping[act] = actionCounter++;
-                        }
-                        int actionNumber = actionMapping[act];
-                        // ss << act << ",";
-                        ss << actionNumber << std::endl;
-                    }
-                    logSchedulerI << ss.str();
-                }
-            }
-            logSchedulerI.close();
-            STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName<< " for memory: " << mem << std::endl);
-        }
-
-
-        // memory-state transition-file
-        for (const auto& [mem, ObsNextMem] : policyMealy.nextMemoryTransition) {
-            // memory-state transition-file
-            auto memoryTransitionsFileName = folderMemName + "/" + std::to_string(mem) + ".csv";
-            // memory-state transition-file
-            std::ofstream logMemoryTransitionsI(memoryTransitionsFileName);
-            if (!logMemoryTransitionsI.is_open()) {
-                std::cerr << "Failed to open scheduler file: " << memoryTransitionsFileName << std::endl;
-                continue;
-            }
-            // metadata to the memory transitions file
-            logMemoryTransitionsI << "#PERMISSIVE" << std::endl << "BEGIN " << 2*obsInfoSize+1 << " 1" << std::endl;
-            for (const auto& [obs, nextMem] : ObsNextMem) {
-                if (!ObsNextMem.empty()) {
-                    std::stringstream ss;
-                    auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obs.first);
-                    auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obs.second);
-                    if (mem == 2){
-                        STORM_LOG_INFO("Printing memory transitions for memory: " << mem << " and observation: " << obs.first << " and " << obs.second << " and next memory: " << nextMem);
-                    }
-                    ss << mem;
-                    for (const auto& [obsName, obsVal] : obsInfo1) {
-                        // write observation values for DT transitions
-                        ss << "," << obsVal;
-                        if (mem == 2) {
-                            STORM_PRINT("OBSINFO: " << " name=val: " << obsName << " = " << obsVal << std::endl);
-                        }
-                    }
-                    for (const auto& [obsName, obsVal] : obsInfo2) {
-                        ss << "," << obsVal;
-                        if (mem == 2) {
-                            STORM_PRINT("OBSINFO: " << " name=val: " << obsName << "\' = " << obsVal << std::endl);
-                        }
-                    }
-                    ss << ",";
-                    ss << nextMem ;
-                    logMemoryTransitionsI << ss.str() << std::endl;
-                    if (mem == 2) {
-                        STORM_PRINT("Added string to memory transitions file: " << ss.str() << std::endl);
-                    }
-                }
-            }
-            logMemoryTransitionsI.close();
-            // Check if the logMemoryTransitionsI has less than or equal to 2 lines
-            checkFile.open(memoryTransitionsFileName);
-            lineCount = 0;
+            // Check if the logFSCTransitionsForDT has less than or equal to 2 lines
+            std::ifstream checkFile(folderName + "/" + "mem_fun.csv");
+            std::string line;
+            int lineCount = 0;
             while (std::getline(checkFile, line)) {
                 lineCount++;
             }
             if (lineCount <= 2) {
-                // throw std::runtime_error("Error: " + memoryTransitionsFileName + " has less than or equal to 2 lines.");
+                // throw std::runtime_error("Error: mem_fun.csv has less than or equal to 2 lines.");
             }
             checkFile.close();
-            STORM_PRINT("WRITING THE Memory FILE: " << memoryTransitionsFileName<< " for memory: " << mem << std::endl);
-        }
+
+            // Writing transitions to dot file
+            for (const auto& [nodes, labels] : groupedTransitions) {
+                const auto& [mem, nextMem] = nodes;
+                std::stringstream ss;
+                // TODO: uncomment or use a different way of transition representation
+                for (const auto& label : labels) {
+                    if (ss.tellp() > 0)
+                        ss << "; ";
+                    ss << label;
+                }
+                logFSC << "    \"" << mem << "\" -> \"" << nextMem << "\" [label=\"" << ss.str() << "\"];" << std::endl;
+            }
+            logFSC << "}" << std::endl;
+            logFSC.close();
+
+            STORM_PRINT("WRITING THE MEMORY FUNCTION FILE: " << folderName + "/" + "mem_fun.dot" << std::endl);
+
+            // Observation based strategy
+            for (const auto& [mem, ObsAction] : policyMealy.actionSelection) {
+                if (reachableNodes.find(mem) != reachableNodes.end()) {
+                    // auto controllerFileName = folderName + "/" + "scheduler_" + std::to_string(mem) + ".csv";
+                    auto controllerFileName = folderSchName + "/" + std::to_string(mem) + ".csv";
+                    std::ofstream logSchedulerI(controllerFileName);
+                    if (!logSchedulerI.is_open()) {
+                        std::cerr << "Failed to open scheduler file: " << controllerFileName << std::endl;
+                        continue;
+                    }
+                    // Prepending the metadata to the scheduler file
+                    logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize + 1 << " 1" << std::endl;
+                    for (const auto& [obs, actDist] : ObsAction) {
+                        // std::stringstream ssMem;
+                        std::stringstream ss;
+                        // todo: completely remove the memory here because we know which memory location we are in
+                        if (!actDist.empty()) {
+                            auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+                            for (const auto& act : actDist) {
+                                ss << mem;
+                                for (const auto& [obsName, obsVal] : obsInfo) {
+                                    ss << "," << obsVal;
+                                }
+                                ss << ",";
+                                if (actionMapping.find(act) == actionMapping.end()) {
+                                    actionMapping[act] = actionCounter++;
+                                }
+                                int actionNumber = actionMapping[act];
+                                // ss << act << ",";
+                                ss << actionNumber << std::endl;
+                            }
+                            logSchedulerI << ss.str();
+                        }
+                    }
+                    logSchedulerI.close();
+
+                    STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName << " for memory: " << mem << std::endl);
+                }
+            }
+
+            // memory-state transition-file
+            for (const auto& [mem, ObsNextMem] : policyMealy.nextMemoryTransition) {
+                if (reachableNodes.find(mem) != reachableNodes.end()) {
+                    // memory-state transition-file
+                    auto memoryTransitionsFileName = folderMemName + "/" + std::to_string(mem) + ".csv";
+                    // memory-state transition-file
+                    std::ofstream logMemoryTransitionsI(memoryTransitionsFileName);
+                    if (!logMemoryTransitionsI.is_open()) {
+                        std::cerr << "Failed to open scheduler file: " << memoryTransitionsFileName << std::endl;
+                        continue;
+                    }
+                    // metadata to the memory transitions file
+                    logMemoryTransitionsI << "#PERMISSIVE" << std::endl << "BEGIN " << 2 * obsInfoSize + 1 << " 1" << std::endl;
+                    for (const auto& [obs, nextMem] : ObsNextMem) {
+                        if (reachableNodes.find(nextMem) != reachableNodes.end()) {
+                            if (!ObsNextMem.empty()) {
+                                std::stringstream ss;
+                                auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obs.first);
+                                auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obs.second);
+                                if (mem == 2) {
+                                    STORM_LOG_INFO("Printing memory transitions for memory: " << mem << " and observation: " << obs.first << " and "
+                                                                                              << obs.second << " and next memory: " << nextMem);
+                                }
+                                ss << mem;
+                                for (const auto& [obsName, obsVal] : obsInfo1) {
+                                    // write observation values for DT transitions
+                                    ss << "," << obsVal;
+                                    if (mem == 2) {
+                                        STORM_PRINT("OBSINFO: " << " name=val: " << obsName << " = " << obsVal << std::endl);
+                                    }
+                                }
+                                for (const auto& [obsName, obsVal] : obsInfo2) {
+                                    ss << "," << obsVal;
+                                    if (mem == 2) {
+                                        STORM_PRINT("OBSINFO: " << " name=val: " << obsName << "\' = " << obsVal << std::endl);
+                                    }
+                                }
+                                ss << ",";
+                                ss << nextMem;
+                                logMemoryTransitionsI << ss.str() << std::endl;
+                                if (mem == 2) {
+                                    STORM_PRINT("Added string to memory transitions file: " << ss.str() << std::endl);
+                                }
+                            }
+                        }
+                    }
+                    logMemoryTransitionsI.close();
+                    // Check if the logMemoryTransitionsI has less than or equal to 2 lines
+                    checkFile.open(memoryTransitionsFileName);
+                    lineCount = 0;
+                    while (std::getline(checkFile, line)) {
+                        lineCount++;
+                    }
+                    if (lineCount <= 2) {
+                        // throw std::runtime_error("Error: " + memoryTransitionsFileName + " has less than or equal to 2 lines.");
+                    }
+                    checkFile.close();
+                    STORM_PRINT("WRITING THE Memory FILE: " << memoryTransitionsFileName << " for memory: " << mem << std::endl);
+                }
+            }
+
 
         // Export action mappings to the file
         for (const auto& [actionName, actionNumber] : actionMapping) {
             logActionMapping << actionName << " <-> " << actionNumber << std::endl;
         }
+
     }
 
 };
