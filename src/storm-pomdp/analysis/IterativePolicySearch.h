@@ -265,7 +265,7 @@ struct ObservationPolicyPosteriorMealy {
                     if (mem == 2){
                         STORM_LOG_INFO("Printing memory transitions for memory: " << mem << " and observation: " << obs.first << " and " << obs.second << " and next memory: " << nextMem);
                     }
-                    ss << mem << ",OBS1:" << obs.first;
+                    ss << mem;
                     for (const auto& [obsName, obsVal] : obsInfo1) {
                         // write observation values for DT transitions
                         ss << "," << obsVal;
@@ -279,7 +279,7 @@ struct ObservationPolicyPosteriorMealy {
                             STORM_PRINT("OBSINFO: " << " name=val: " << obsName << "\' = " << obsVal << std::endl);
                         }
                     }
-                    ss << "," << " OBS2:" << obs.second << ",";
+                    ss << ",";
                     ss << nextMem ;
                     logMemoryTransitionsI << ss.str() << std::endl;
                     if (mem == 2) {
@@ -560,9 +560,8 @@ struct InternalObservationScheduler {
     }
 
     void printForObservations(const storage::sparse::StateValuations& obsValuations, const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch) const {
-
+        STORM_PRINT("ObservationAfterSwitch in printForObservations: " << observationsAfterSwitch << std::endl);
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
-
             if (observations.get(obs) ) {
                 auto obsInfo = obsValuations.getStateInfo(obs);
                 std::stringstream ss;
@@ -693,8 +692,8 @@ struct InternalObservationScheduler {
         return schedulerMoore;
     }
 
-    ObservationPolicyPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler ,
-                                                     ObservationPolicyPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId) const {
+    ObservationPolicyPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler, ObservationPolicyPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId) const {
+        STORM_PRINT("ObservationAfterSwitch in FSC mealy: " << observationsAfterSwitch << std::endl);
         bool isSwitch = false;
         // find-out if we have to transition to the switch state
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
@@ -705,33 +704,53 @@ struct InternalObservationScheduler {
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
             std::vector<std::string> actionVector;
             if (observations.get(obs)) {
-                auto stateId = statesPerObservation[obs][0]; // assuming it is enough to look at the first state to get the correct action
+                auto stateId = statesPerObservation[obs][0];  // assuming it is enough to look at the first state to get the correct action
                 for (auto act : actions[obs]) {
                     uint_fast64_t rowIndex = choiceIndices[stateId] + act;
                     auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
                     for (const auto& choiceLabel : choiceLabels) {
                         actionVector.push_back(choiceLabel);
-                    }
-                }
-                schedulerPosteriorMealy.actionSelection[schedulerId][obs] = actionVector;
-                // todo: the first observation should be dont care, currently cross product for all
-                //  how to effectively represent this?
-                if(!observationsAfterSwitch.get(obs)){
-                    for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
-                        if(observations.get(obs1)){
-                            std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
-                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerId;
+                        if (schedulerId == 2) {
+                            STORM_PRINT("Action: " << choiceLabel << " for observation: " << obs << std::endl);
                         }
                     }
                 }
-                else {
-                    // todo: if we somehow get the information to which posterior-observation a switch belongs to, we can avoid some of the transitions
-                    // in the SMT encoding, either it's already there or we can add a new variable to extract this information
-                    for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
-                        if (observations.get(obs1)) {
+                schedulerPosteriorMealy.actionSelection[schedulerId][obs] = actionVector;
+                for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
+                    if(observations.get(obs1)){
+                        std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
+                        schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerId;
+                        if(schedulerId == 2){
+                            STORM_PRINT("No switch Transition: " << obs1 << " -> " << obs << " to " << schedulerId << std::endl);
+                        }
+                    }
+                }
+            }
+                // todo: the first observation should be dont care, currently cross product for all
+                //  how to effectively represent this?
+//                if(!observationsAfterSwitch.get(obs)){
+//                    STORM_PRINT("NO observation After Switch for: " << obs << " in scheduler " << schedulerId << std::endl);
+//                    for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
+//                        if(observations.get(obs1)){
+//                            std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
+//                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerId;
+//                            if(schedulerId == 2){
+//                                STORM_PRINT("No switch Transition: " << obs1 << " -> " << obs << " to " << schedulerId << std::endl);
+//                            }
+//                        }
+//                    }
+//                }
+            if(observationsAfterSwitch.get(obs)){
+                STORM_PRINT("YES observation After Switch for: " << obs << " in scheduler " << schedulerId << std::endl);
+                // todo: if we somehow get the information to which posterior-observation a switch belongs to, we can avoid some of the transitions
+                // in the SMT encoding, either it's already there or we can add a new variable to extract this information
+                for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
+                    if (observations.get(obs1)) {
                         //if (observations.get(obs1) && switchObservations.get(obs1)) {
-                            std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
-                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerRef[obs];
+                        std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
+                        schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerRef[obs];
+                        if(schedulerId == 2){
+                            STORM_PRINT("Switch Transition: " << obs1 << " -> " << obs << " from " << schedulerId << " to " << schedulerRef[obs] << std::endl);
                         }
                     }
                 }
@@ -741,6 +760,10 @@ struct InternalObservationScheduler {
                     if(observations.get(obs1)){
                         std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
                         schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
+                        if(schedulerId == 2){
+                            STORM_PRINT("Transition to WIN: " << obs1 << " -> " << obs << " to " << schedulerId << std::endl);
+                        }
+
                     }
                 }
             }
