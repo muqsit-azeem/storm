@@ -123,6 +123,9 @@ struct ObservationPolicyPosteriorMealy {
 
     void exportPosteriorMealyPolicy(ObservationPolicyPosteriorMealy policyMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName) const {
 
+        bool lazyMemoryTransition = true;
+
+        bool unstructuredObservations = false;
         // get reachable memory nodes
         std::set<uint64_t> reachableNodes = getReachableNodes();
 
@@ -183,30 +186,44 @@ struct ObservationPolicyPosteriorMealy {
                         ssDTTransitions << mem << ",";
                         auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obspair.first);
                         auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obspair.second);
-                        for (const auto& [obsName, obsVal] : obsInfo1) {
-                            // if (ss.tellp() > 0) ss << ", ";
-                            // ss <<  obsName << "\'=" << obsVal;
-
+                        if (unstructuredObservations){
                             // write observation values for DT transitions
-                            ssDTTransitions << obsVal << ",";
+                            ssDTTransitions << obspair.first << ",";
+                        }
+                        else {
+                            for (const auto& [obsName, obsVal] : obsInfo1) {
+                                // if (ss.tellp() > 0) ss << ", ";
+                                // ss <<  obsName << "\'=" << obsVal;
 
-                            // write observation names once
-                            if (!writtenObservations) {
-                                OrderObservations << obsName << std::endl;
+                                // write observation values for DT transitions
+                                ssDTTransitions << obsVal << ",";
+
+                                // write observation names once
+                                if (!writtenObservations) {
+                                    OrderObservations << obsName << std::endl;
+                                }
                             }
                         }
-                        ss << obspair.first << ",";
-                        for (const auto& [obsName, obsVal] : obsInfo2) {
-                            // if (ss.tellp() > 0) ss << ", ";
-                            // ss <<  obsName << "=" << obsVal;
-                            // write observation values for DT transitions
-                            ssDTTransitions << obsVal << ",";
 
-                            // write observation names once
-                            if (!writtenObservations) {
-                                OrderObservations << obsName << "\'" << std::endl;
+                        ss << obspair.first << ","; // writing storm internal id on the transition
+                        if (unstructuredObservations){
+                            // write observation values for DT transitions
+                            ssDTTransitions << obspair.second << ",";
+                        }
+                        else{
+                            for (const auto& [obsName, obsVal] : obsInfo2) {
+                                // if (ss.tellp() > 0) ss << ", ";
+                                // ss <<  obsName << "=" << obsVal;
+                                // write observation values for DT transitions
+                                ssDTTransitions << obsVal << ",";
+
+                                // write observation names once
+                                if (!writtenObservations) {
+                                    OrderObservations << obsName << "\'" << std::endl;
+                                }
                             }
                         }
+
                         ss << obspair.second << "\'";
                         // write destination memory for DT transitions
                         ssDTTransitions << nextMem << std::endl;
@@ -277,8 +294,13 @@ struct ObservationPolicyPosteriorMealy {
                             auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
                             for (const auto& act : actDist) {
                                 ss << mem;
-                                for (const auto& [obsName, obsVal] : obsInfo) {
-                                    ss << "," << obsVal;
+                                if(unstructuredObservations){
+                                    ss << "," << obs;
+                                }
+                                else {
+                                    for (const auto& [obsName, obsVal] : obsInfo) {
+                                        ss << "," << obsVal;
+                                    }
                                 }
                                 ss << ",";
                                 if (actionMapping.find(act) == actionMapping.end()) {
@@ -320,26 +342,29 @@ struct ObservationPolicyPosteriorMealy {
 //                                    STORM_LOG_INFO("Printing memory transitions for memory: " << mem << " and observation: " << obs.first << " and "
 //                                                                                              << obs.second << " and next memory: " << nextMem);
 //                                }
+
                                 ss << mem;
-                                for (const auto& [obsName, obsVal] : obsInfo1) {
-                                    // write observation values for DT transitions
-                                    ss << "," << obsVal;
-//                                    if (mem == 2) {
-//                                        STORM_PRINT("OBSINFO: " << " name=val: " << obsName << " = " << obsVal << std::endl);
-//                                    }
+                                if(unstructuredObservations){
+                                    ss << "," << obs.first << "," << obs.second;
                                 }
-                                for (const auto& [obsName, obsVal] : obsInfo2) {
-                                    ss << "," << obsVal;
-//                                    if (mem == 2) {
-//                                        STORM_PRINT("OBSINFO: " << " name=val: " << obsName << "\' = " << obsVal << std::endl);
-//                                    }
+                                else {
+                                    for (const auto& [obsName, obsVal] : obsInfo1) {
+                                        // write observation values for DT transitions
+                                        ss << "," << obsVal;
+                                    }
+                                    for (const auto& [obsName, obsVal] : obsInfo2) {
+                                        ss << "," << obsVal;
+                                    }
                                 }
                                 ss << ",";
-                                ss << nextMem;
+                                if(lazyMemoryTransition & nextMem!=mem & nextMem!=mem-1){
+                                    ss << "0";
+                                }
+                                else {
+                                    ss << nextMem;
+                                }
+                                // ss << nextMem;
                                 logMemoryTransitionsI << ss.str() << std::endl;
-//                                if (mem == 2) {
-//                                    STORM_PRINT("Added string to memory transitions file: " << ss.str() << std::endl);
-//                                }
                             }
                         }
                     }
@@ -357,7 +382,6 @@ struct ObservationPolicyPosteriorMealy {
                     STORM_PRINT("WRITING THE Memory FILE: " << memoryTransitionsFileName << " for memory: " << mem << std::endl);
                 }
             }
-
 
         // Export action mappings to the file
         for (const auto& [actionName, actionNumber] : actionMapping) {
@@ -752,7 +776,6 @@ struct InternalObservationScheduler {
     }
 
     ObservationPolicyPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler, ObservationPolicyPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId) const {
-        bool lazyMemoryTransition = true;
         // STORM_PRINT("ObservationAfterSwitch in FSC mealy: " << observationsAfterSwitch << std::endl);
         bool isSwitch = false;
         // find-out if we have to transition to the switch state
@@ -819,13 +842,13 @@ struct InternalObservationScheduler {
                 for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
                     if(observations.get(obs1)){
                         std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
-                        if(lazyMemoryTransition){
-                            // if(schedulerId>1){
-                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerId-1;
-                            //}
-                        } else {
+//                        if(lazyMemoryTransition){
+//                            // if(schedulerId>1){
+//                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerId-1;
+//                            //}
+//                        } else {
                             schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
-                        }
+//                        }
 
 //                        if(schedulerId == 2){
 //                            STORM_PRINT("Transition to WIN: " << obs1 << " -> " << obs << " to " << schedulerId << std::endl);
