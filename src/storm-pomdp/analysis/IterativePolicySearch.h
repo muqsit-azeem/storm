@@ -91,6 +91,7 @@ class MemlessSearchOptions {
 
 struct ObservationPolicyPosteriorMealy {
     uint64_t initialNode;
+    uint64_t numberOfNodes;
     // action selection function <memory -> (observation -> action)
     std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> actionSelection;
     // next memory function <memory -> <observation -> memory>>
@@ -98,7 +99,7 @@ struct ObservationPolicyPosteriorMealy {
 
 
     // function to get reachable nodes
-    std::set<uint64_t> getReachableNodes() const {
+    std::set<uint64_t> getReachableNodes() {
         std::set<uint64_t> visited;
         std::queue<uint64_t> queue;
         visited.insert(initialNode);
@@ -118,18 +119,19 @@ struct ObservationPolicyPosteriorMealy {
                 }
             }
         }
+        numberOfNodes = visited.size();
         return visited;
     }
 
-    void exportPosteriorMealyPolicy(ObservationPolicyPosteriorMealy policyMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName) const {
+    void exportPosteriorMealyPolicy(ObservationPolicyPosteriorMealy policyMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName) {
 
         // get reachable memory nodes
         std::set<uint64_t> reachableNodes = getReachableNodes();
 
-        STORM_PRINT("Reachable nodes: " << std::endl);
-        for (auto node : reachableNodes) {
-            STORM_PRINT(node << std::endl);
-        }
+//        STORM_PRINT("Reachable nodes: " << std::endl);
+//        for (auto node : reachableNodes) {
+//            STORM_PRINT(node << std::endl);
+//        }
 
         std::string folderSchName = folderName + "/" + "schedulers";
         std::string folderMemName = folderName + "/" + "memory-transitions";
@@ -171,12 +173,12 @@ struct ObservationPolicyPosteriorMealy {
 
         // Memory update
         for (const auto& [mem, nextMemFun] : policyMealy.nextMemoryTransition) {
-            STORM_PRINT("Current Memory: " << mem << std::endl);
+            // STORM_PRINT("Current Memory: " << mem << std::endl);
             if (reachableNodes.find(mem) != reachableNodes.end()) {  // check if the memory is reachable
                 for (const auto& [obspair, nextMem] : nextMemFun) {
-                    STORM_PRINT("Next Memory: " << nextMem << std::endl);
+                    // STORM_PRINT("Next Memory: " << nextMem << std::endl);
                     if (reachableNodes.find(nextMem) != reachableNodes.end()) {
-                        STORM_PRINT("Next Memory: " << nextMem << " is reachable." << std::endl);
+                        // STORM_PRINT("Next Memory: " << nextMem << " is reachable." << std::endl);
                         std::stringstream ss;
                         std::stringstream ssDTTransitions;
                         // write source memory for DT transitions
@@ -213,16 +215,18 @@ struct ObservationPolicyPosteriorMealy {
                         logFSCTransitionsForDT << ssDTTransitions.str();
                         // groupedTransitions[{mem, nextMem}].insert(ss.str());
                         groupedTransitions[{mem, nextMem}].insert(ss.str());
-                        STORM_PRINT("Inserted string to memory transitions file: " << ss.str() << std::endl
-                                                                                   << "From memory: " << mem << "To memory: " << nextMem << std::endl);
+                        // STORM_PRINT("Inserted string to memory transitions file: " << ss.str() << std::endl
+                        //                                                           << "From memory: " << mem << "To memory: " << nextMem << std::endl);
                         writtenObservations = true;
-                    } else {
-                        STORM_PRINT("Next Memory: " << nextMem << " is not reachable." << std::endl);
                     }
+//                    else {
+//                        STORM_PRINT("Next Memory: " << nextMem << " is not reachable." << std::endl);
+//                    }
                 }
-            } else {
-                STORM_PRINT("Current Memory: " << mem << " is not reachable." << std::endl);
             }
+//            else {
+//                STORM_PRINT("Current Memory: " << mem << " is not reachable." << std::endl);
+//            }
         }
             logFSCTransitionsForDT.close();
 
@@ -314,30 +318,30 @@ struct ObservationPolicyPosteriorMealy {
                                 std::stringstream ss;
                                 auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obs.first);
                                 auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obs.second);
-                                if (mem == 2) {
-                                    STORM_LOG_INFO("Printing memory transitions for memory: " << mem << " and observation: " << obs.first << " and "
-                                                                                              << obs.second << " and next memory: " << nextMem);
-                                }
+//                                if (mem == 2) {
+//                                    STORM_LOG_INFO("Printing memory transitions for memory: " << mem << " and observation: " << obs.first << " and "
+//                                                                                              << obs.second << " and next memory: " << nextMem);
+//                                }
                                 ss << mem;
                                 for (const auto& [obsName, obsVal] : obsInfo1) {
                                     // write observation values for DT transitions
                                     ss << "," << obsVal;
-                                    if (mem == 2) {
-                                        STORM_PRINT("OBSINFO: " << " name=val: " << obsName << " = " << obsVal << std::endl);
-                                    }
+//                                    if (mem == 2) {
+//                                        STORM_PRINT("OBSINFO: " << " name=val: " << obsName << " = " << obsVal << std::endl);
+//                                    }
                                 }
                                 for (const auto& [obsName, obsVal] : obsInfo2) {
                                     ss << "," << obsVal;
-                                    if (mem == 2) {
-                                        STORM_PRINT("OBSINFO: " << " name=val: " << obsName << "\' = " << obsVal << std::endl);
-                                    }
+//                                    if (mem == 2) {
+//                                        STORM_PRINT("OBSINFO: " << " name=val: " << obsName << "\' = " << obsVal << std::endl);
+//                                    }
                                 }
                                 ss << ",";
                                 ss << nextMem;
                                 logMemoryTransitionsI << ss.str() << std::endl;
-                                if (mem == 2) {
-                                    STORM_PRINT("Added string to memory transitions file: " << ss.str() << std::endl);
-                                }
+//                                if (mem == 2) {
+//                                    STORM_PRINT("Added string to memory transitions file: " << ss.str() << std::endl);
+//                                }
                             }
                         }
                     }
@@ -355,15 +359,11 @@ struct ObservationPolicyPosteriorMealy {
                     STORM_PRINT("WRITING THE Memory FILE: " << memoryTransitionsFileName << " for memory: " << mem << std::endl);
                 }
             }
-
-
         // Export action mappings to the file
         for (const auto& [actionName, actionNumber] : actionMapping) {
             logActionMapping << actionName << " <-> " << actionNumber << std::endl;
         }
-
     }
-
 };
 
 
@@ -750,7 +750,8 @@ struct InternalObservationScheduler {
     }
 
     ObservationPolicyPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler, ObservationPolicyPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId) const {
-        STORM_PRINT("ObservationAfterSwitch in FSC mealy: " << observationsAfterSwitch << std::endl);
+        // STORM_PRINT("ObservationAfterSwitch in FSC mealy: " << observationsAfterSwitch << std::endl);
+
         bool isSwitch = false;
         // find-out if we have to transition to the switch state
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
@@ -777,9 +778,9 @@ struct InternalObservationScheduler {
                     if(observations.get(obs1)){
                         std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
                         schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerId;
-                        if(schedulerId == 2){
-                            STORM_PRINT("No switch Transition: " << obs1 << " -> " << obs << " to " << schedulerId << std::endl);
-                        }
+//                        if(schedulerId == 2){
+//                            STORM_PRINT("No switch Transition: " << obs1 << " -> " << obs << " to " << schedulerId << std::endl);
+//                        }
                     }
                 }
             }
@@ -798,7 +799,7 @@ struct InternalObservationScheduler {
 //                    }
 //                }
             if(observationsAfterSwitch.get(obs)){
-                STORM_PRINT("YES observation After Switch for: " << obs << " in scheduler " << schedulerId << std::endl);
+                // STORM_PRINT("YES observation After Switch for: " << obs << " in scheduler " << schedulerId << std::endl);
                 // todo: if we somehow get the information to which posterior-observation a switch belongs to, we can avoid some of the transitions
                 // in the SMT encoding, either it's already there or we can add a new variable to extract this information
                 for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
@@ -806,9 +807,9 @@ struct InternalObservationScheduler {
                         //if (observations.get(obs1) && switchObservations.get(obs1)) {
                         std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
                         schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerRef[obs];
-                        if(schedulerId == 2){
-                            STORM_PRINT("Switch Transition: " << obs1 << " -> " << obs << " from " << schedulerId << " to " << schedulerRef[obs] << std::endl);
-                        }
+//                        if(schedulerId == 2){
+//                            STORM_PRINT("Switch Transition: " << obs1 << " -> " << obs << " from " << schedulerId << " to " << schedulerRef[obs] << std::endl);
+//                        }
                     }
                 }
             }
@@ -817,10 +818,9 @@ struct InternalObservationScheduler {
                     if(observations.get(obs1)){
                         std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
                         schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
-                        if(schedulerId == 2){
-                            STORM_PRINT("Transition to WIN: " << obs1 << " -> " << obs << " to " << schedulerId << std::endl);
-                        }
-
+//                        if(schedulerId == 2){
+//                            STORM_PRINT("Transition to WIN: " << obs1 << " -> " << obs << " to " << schedulerId << std::endl);
+//                        }
                     }
                 }
             }
