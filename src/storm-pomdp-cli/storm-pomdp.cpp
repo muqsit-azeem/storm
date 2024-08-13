@@ -115,6 +115,8 @@ MemlessSearchOptions fillMemlessSearchOptionsFromSettings() {
     auto const& qualSettings = storm::settings::getModule<storm::settings::modules::QualitativePOMDPAnalysisSettings>();
 
     options.onlyDeterministicStrategies = qualSettings.isOnlyDeterministicSet();
+    options.lazyDTFSC = qualSettings.isLazyDTFSCOptionSet();
+    options.unstructuredObservations = qualSettings.isUnstructuredObservationOptionSet();
     uint64_t loglevel = 0;
     // TODO a big ugly, but we have our own loglevels (for technical reasons)
     if (storm::utility::getLogLevel() == l3pp::LogLevel::INFO) {

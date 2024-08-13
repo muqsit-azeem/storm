@@ -32,6 +32,8 @@ class QualitativePOMDPAnalysisSettings : public ModuleSettings {
     bool isExportWinningRegionSet() const;
     std::string exportWinningRegionPath() const;
     bool isGraphPreprocessingAllowed() const;
+    bool isLazyDTFSCOptionSet() const;
+    bool isUnstructuredObservationOptionSet() const;
     bool isMemlessSearchSet() const;
     std::string getMemlessSearchMethod() const;
 

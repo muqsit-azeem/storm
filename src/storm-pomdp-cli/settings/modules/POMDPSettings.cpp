@@ -26,6 +26,7 @@ std::vector<std::string> memoryPatterns = {"trivial", "fixedcounter", "selective
 const std::string checkFullyObservableOption = "check-fully-observable";
 const std::string isQualitativeOption = "qualitative-analysis";
 
+
 POMDPSettings::POMDPSettings() : ModuleSettings(moduleName) {
     this->addOption(storm::settings::OptionBuilder(moduleName, noCanonicOption, false,
                                                    "If this is set, actions will not be ordered canonically. Could yield incorrect results.")
@@ -111,6 +112,7 @@ bool POMDPSettings::isCheckFullyObservableSet() const {
 bool POMDPSettings::isQualitativeAnalysisSet() const {
     return this->getOption(isQualitativeOption).getHasOptionBeenSet();
 }
+
 
 uint64_t POMDPSettings::getMemoryBound() const {
     return this->getOption(memoryBoundOption).getArgumentByName("bound").getValueAsUnsignedInteger();

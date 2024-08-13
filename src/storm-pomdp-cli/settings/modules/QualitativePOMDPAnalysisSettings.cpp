@@ -25,6 +25,9 @@ const std::string exportWinningRegionOption = "exportwinningregion";
 const std::string preventGraphPreprocessing = "nographprocessing";
 const std::string beliefSupportMCOption = "belsupmc";
 const std::string memlessSearchOption = "memlesssearch";
+const std::string isLazyDTFSC = "lazy-dt-fsc";
+const std::string isUnstructuredObservation = "unstructured-observation";
+
 std::vector<std::string> memlessSearchMethods = {"one-shot", "iterative"};
 
 QualitativePOMDPAnalysisSettings::QualitativePOMDPAnalysisSettings() : ModuleSettings(moduleName) {
@@ -75,6 +78,8 @@ QualitativePOMDPAnalysisSettings::QualitativePOMDPAnalysisSettings() : ModuleSet
             .build());
     this->addOption(
         storm::settings::OptionBuilder(moduleName, preventGraphPreprocessing, true, "Prevent graph preprocessing (for debugging)").setIsAdvanced().build());
+    this->addOption(storm::settings::OptionBuilder(moduleName, isLazyDTFSC, false, "Sets the option Lazy DT FSC in the qualitative analysis").build());
+    this->addOption(storm::settings::OptionBuilder(moduleName, isUnstructuredObservation, false, "Sets the option to see DT sizes whe the observations are unstructured in the qualitative analysis").build());
 }
 
 uint64_t QualitativePOMDPAnalysisSettings::getLookahead() const {
@@ -130,6 +135,14 @@ bool QualitativePOMDPAnalysisSettings::isPrintWinningRegionSet() const {
 
 bool QualitativePOMDPAnalysisSettings::isMemlessSearchSet() const {
     return this->getOption(memlessSearchOption).getHasOptionBeenSet();
+}
+
+bool QualitativePOMDPAnalysisSettings::isLazyDTFSCOptionSet() const {
+    return this->getOption(isLazyDTFSC).getHasOptionBeenSet();
+}
+
+bool QualitativePOMDPAnalysisSettings::isUnstructuredObservationOptionSet() const {
+    return this->getOption(isUnstructuredObservation).getHasOptionBeenSet();
 }
 
 std::string QualitativePOMDPAnalysisSettings::getMemlessSearchMethod() const {

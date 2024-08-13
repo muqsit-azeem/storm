@@ -80,6 +80,8 @@ class MemlessSearchOptions {
     uint64_t restartAfterNIterations = 250;
     uint64_t extensionCallTimeout = 0u;
     uint64_t localIterationMaximum = 600;
+    bool lazyDTFSC = false;
+    bool unstructuredObservations = false;
 
    private:
     std::string exportSATcalls = "";
@@ -121,17 +123,12 @@ struct ObservationPolicyPosteriorMealy {
         return visited;
     }
 
-    void exportPosteriorMealyPolicy(ObservationPolicyPosteriorMealy policyMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName) const {
+    void exportPosteriorMealyPolicy(ObservationPolicyPosteriorMealy policyMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName, bool lazyMemoryTransition, bool unstructuredObservations) const {
 
-        bool lazyMemoryTransition = false;
-        bool unstructuredObservations = true;
+        // bool lazyMemoryTransition = false;
+        //bool unstructuredObservations = true;
         // get reachable memory nodes
         std::set<uint64_t> reachableNodes = getReachableNodes();
-
-//        STORM_PRINT("Reachable nodes: " << std::endl);
-//        for (auto node : reachableNodes) {
-//            STORM_PRINT(node << std::endl);
-//        }
 
         std::string folderSchName = folderName + "/" + "schedulers";
         std::string folderMemName = folderName + "/" + "memory-transitions";
@@ -167,7 +164,7 @@ struct ObservationPolicyPosteriorMealy {
 
         // Adding the initial state node
         logFSC << R"(    "initial" [label="", style=invis, width=0];)" << std::endl;
-        logFSC << "    \"initial\" -> \"" << policyMealy.initialNode << "\";" << std::endl;
+        logFSC << R"("    "initial" -> ")" << policyMealy.initialNode << "\";" << std::endl;
         // A map to store grouped transitions
         std::map<std::pair<int, int>, std::set<std::string>> groupedTransitions;
 
@@ -348,10 +345,6 @@ struct ObservationPolicyPosteriorMealy {
                                 std::stringstream ss;
                                 auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obs.first);
                                 auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obs.second);
-//                                if (mem == 2) {
-//                                    STORM_LOG_INFO("Printing memory transitions for memory: " << mem << " and observation: " << obs.first << " and "
-//                                                                                              << obs.second << " and next memory: " << nextMem);
-//                                }
 
                                 ss << mem;
                                 if(unstructuredObservations){
@@ -367,7 +360,8 @@ struct ObservationPolicyPosteriorMealy {
                                     }
                                 }
                                 ss << ",";
-                                if(lazyMemoryTransition & nextMem!=mem & nextMem!=mem-1){
+                                //  & nextMem!=(mem-1) can avoid this conjunct to make it even smaller
+                                if(lazyMemoryTransition & nextMem!=mem){
                                     ss << "0";
                                 }
                                 else {

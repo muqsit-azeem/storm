@@ -469,7 +469,6 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
             }
         }
         if (observationIsWinning) {
-//            STORM_PRINT("Observation " << observation << " is winning.");
             auto obsInfo = getObservationValuation(observation);
             STORM_LOG_INFO("Observation " << obsInfo <<  " with Storm internal id = " << observation << " is target.");
             stats.incrementGraphBasedWinningObservations();
@@ -496,7 +495,6 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         STORM_LOG_INFO("Extend winning region for observation " << observation << " with target states/offsets" << update);
         winningRegion.addTargetStates(observation, update);
         assert(winningRegion.query(observation, update));  // "Cannot continue: No scheduler known for state " << i << " (observation " << obs << ").");
-
         updated.set(observation);
     }
 
@@ -968,7 +966,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         }
     }
     // schedulerMoore.exportMooreScheduler(schedulerMoore, obsValuations, options.getWinningRegionFolder());
-    schedulerPostMealy.exportPosteriorMealyPolicy(schedulerPostMealy, obsValuations, options.getWinningRegionFolder());
+    schedulerPostMealy.exportPosteriorMealyPolicy(schedulerPostMealy, obsValuations, options.getWinningRegionFolder(), options.lazyDTFSC, options.unstructuredObservations);
     return true;
 }
 
