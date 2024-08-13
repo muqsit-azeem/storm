@@ -123,9 +123,8 @@ struct ObservationPolicyPosteriorMealy {
 
     void exportPosteriorMealyPolicy(ObservationPolicyPosteriorMealy policyMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName) const {
 
-        bool lazyMemoryTransition = true;
-
-        bool unstructuredObservations = false;
+        bool lazyMemoryTransition = false;
+        bool unstructuredObservations = true;
         // get reachable memory nodes
         std::set<uint64_t> reachableNodes = getReachableNodes();
 
@@ -285,7 +284,12 @@ struct ObservationPolicyPosteriorMealy {
                         continue;
                     }
                     // Prepending the metadata to the scheduler file
-                    logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize + 1 << " 1" << std::endl;
+                    if(unstructuredObservations){
+                        logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << 2 << " 1" << std::endl;
+                    }
+                    else {
+                        logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize + 1 << " 1" << std::endl;
+                    }
                     for (const auto& [obs, actDist] : ObsAction) {
                         // std::stringstream ssMem;
                         std::stringstream ss;
@@ -330,8 +334,14 @@ struct ObservationPolicyPosteriorMealy {
                         std::cerr << "Failed to open scheduler file: " << memoryTransitionsFileName << std::endl;
                         continue;
                     }
+                    if(unstructuredObservations){
+                        logMemoryTransitionsI << "#PERMISSIVE" << std::endl << "BEGIN " << 3 << " 1" << std::endl;
+                    }
+                    else{
+                        logMemoryTransitionsI << "#PERMISSIVE" << std::endl << "BEGIN " << 2 * obsInfoSize + 1 << " 1" << std::endl;
+
+                    }
                     // metadata to the memory transitions file
-                    logMemoryTransitionsI << "#PERMISSIVE" << std::endl << "BEGIN " << 2 * obsInfoSize + 1 << " 1" << std::endl;
                     for (const auto& [obs, nextMem] : ObsNextMem) {
                         if (reachableNodes.find(nextMem) != reachableNodes.end()) {
                             if (!ObsNextMem.empty()) {
