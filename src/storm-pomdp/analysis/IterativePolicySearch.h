@@ -361,7 +361,7 @@ struct ObservationPolicyPosteriorMealy {
                                 }
                                 ss << ",";
                                 //  & nextMem!=(mem-1) can avoid this conjunct to make it even smaller
-                                if(lazyMemoryTransition & nextMem!=mem){
+                                if(lazyMemoryTransition & (nextMem!=mem)){
                                     ss << "0";
                                 }
                                 else {
