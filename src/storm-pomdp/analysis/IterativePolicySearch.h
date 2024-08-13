@@ -164,7 +164,7 @@ struct ObservationPolicyPosteriorMealy {
 
         // Adding the initial state node
         logFSC << R"(    "initial" [label="", style=invis, width=0];)" << std::endl;
-        logFSC << R"("    "initial" -> ")" << policyMealy.initialNode << "\";" << std::endl;
+        logFSC << R"(    "initial" -> ")" << policyMealy.initialNode << "\";" << std::endl;
         // A map to store grouped transitions
         std::map<std::pair<int, int>, std::set<std::string>> groupedTransitions;
 
@@ -365,6 +365,7 @@ struct ObservationPolicyPosteriorMealy {
                                     ss << "0";
                                 }
                                 else {
+
                                     ss << nextMem;
                                 }
                                 // ss << nextMem;
