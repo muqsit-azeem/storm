@@ -157,7 +157,7 @@ struct ObservationPolicyPosteriorMealy {
         }
 
         // Prepending the metadata to the scheduler file
-        logFSCTransitionsForDT << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize+1 << " 1" << std::endl;
+        logFSCTransitionsForDT << "#PERMISSIVE" << std::endl << "BEGIN " << 2*obsInfoSize+1 << " 1" << std::endl;
 
         // Writing the DOT graph header
         logFSC << "digraph MemoryTransitions {" << std::endl;
@@ -365,7 +365,6 @@ struct ObservationPolicyPosteriorMealy {
                                     ss << "0";
                                 }
                                 else {
-
                                     ss << nextMem;
                                 }
                                 // ss << nextMem;
@@ -782,13 +781,13 @@ struct InternalObservationScheduler {
 
     ObservationPolicyPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler, ObservationPolicyPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId) const {
         // STORM_PRINT("ObservationAfterSwitch in FSC mealy: " << observationsAfterSwitch << std::endl);
-        bool isSwitch = false;
-        // find-out if we have to transition to the switch state
-        for (uint64_t obs = 0; obs < observations.size(); ++obs) {
-            if (switchObservations.get(obs)){
-                isSwitch = true;
-            }
-        }
+//        bool isSwitch = false;
+//        // find-out if we have to transition to the switch state
+//        for (uint64_t obs = 0; obs < observations.size(); ++obs) {
+//            if (switchObservations.get(obs)){
+//                isSwitch = true;
+//            }
+//        }
         for (uint64_t obs = 0; obs < observations.size(); ++obs) {
             std::vector<std::string> actionVector;
             if (observations.get(obs)) {
@@ -847,17 +846,7 @@ struct InternalObservationScheduler {
                 for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
                     if(observations.get(obs1)){
                         std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
-//                        if(lazyMemoryTransition){
-//                            // if(schedulerId>1){
-//                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = schedulerId-1;
-//                            //}
-//                        } else {
-                            schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
-//                        }
-
-//                        if(schedulerId == 2){
-//                            STORM_PRINT("Transition to WIN: " << obs1 << " -> " << obs << " to " << schedulerId << std::endl);
-//                        }
+                        schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
                     }
                 }
             }
