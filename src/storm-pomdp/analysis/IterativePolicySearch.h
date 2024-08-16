@@ -97,6 +97,8 @@ struct ObservationPolicyPosteriorMealy {
     std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> actionSelection;
     // next memory function <memory -> <observation -> memory>>
     std::map<uint64_t, std::map<std::pair<uint64_t, uint64_t> , uint64_t>> nextMemoryTransition;
+    // next memory function <memory -> <observation -> memory>> only for eager move to WIN memory transition
+    std::map<uint64_t, std::map<std::pair<uint64_t, uint64_t> , uint64_t>> winMemoryTransition;
 
 
     // function to get reachable nodes
@@ -123,12 +125,66 @@ struct ObservationPolicyPosteriorMealy {
         return visited;
     }
 
+
+    // function to get reachable nodes from a given node
+    std::set<uint64_t> getReachableNodesFromArbitraryStartNode(uint64_t startNode) const {
+        std::set<uint64_t> visited;
+        std::queue<uint64_t> queue;
+        // visited.insert(startNode); // intentionally commented: do not insert the start node we want subsequent nodes
+        queue.push(startNode);
+
+        while (!queue.empty()) {
+            uint64_t current = queue.front();
+            queue.pop();
+
+            // check all transitions from the current node
+            if (nextMemoryTransition.find(current) != nextMemoryTransition.end()) {
+                for (const auto& [key, nextNode] : nextMemoryTransition.at(current)) {
+                    if (visited.find(nextNode) == visited.end()) {
+                        visited.insert(nextNode);
+                        queue.push(nextNode);
+                    }
+                }
+            }
+        }
+        return visited;
+    }
+
+
+    uint64_t findMaxReachableNode(const std::set<uint64_t>& reachableNodes) const {
+        if (!reachableNodes.empty()) {
+            return *std::max_element(reachableNodes.begin(), reachableNodes.end());
+        }
+        throw std::runtime_error("The set of reachable nodes is empty.");
+    }
+
+
+    bool isPairInWinTransitions(uint64_t mem, std::pair<uint64_t, uint64_t> obspair, uint64_t nextMem) const {
+        // Check if the key 'mem' exists in the outer map
+        auto it = winMemoryTransition.find(mem);
+        if (it != winMemoryTransition.end()) {
+            // Check if the key 'obspair' exists in the inner map
+            auto it2 = it->second.find(obspair);
+            if (it2 != it->second.end()) {
+                // Check if the value 'nextMem' exists in the inner map
+                if (it2->second == nextMem) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
     void exportPosteriorMealyPolicy(ObservationPolicyPosteriorMealy policyMealy, const storage::sparse::StateValuations& obsValuations, std::string folderName, bool lazyMemoryTransition, bool unstructuredObservations) const {
 
         // bool lazyMemoryTransition = false;
         //bool unstructuredObservations = true;
         // get reachable memory nodes
         std::set<uint64_t> reachableNodes = getReachableNodes();
+
+        std::unordered_map<uint64_t, std::unordered_map<uint64_t, std::vector<std::string>>> skipActionSelection;
+
 
         std::string folderSchName = folderName + "/" + "schedulers";
         std::string folderMemName = folderName + "/" + "memory-transitions";
@@ -268,57 +324,10 @@ struct ObservationPolicyPosteriorMealy {
             logFSC << "}" << std::endl;
             logFSC.close();
 
-            STORM_PRINT("WRITING THE MEMORY FUNCTION FILE: " << folderName + "/" + "mem_fun.dot" << std::endl);
+            STORM_PRINT("WRITING THE MEMORY FUNCTION DOT FILE GRAPH: " << folderName + "/" + "mem_fun.dot" << std::endl);
 
-            // Observation based strategy
-            for (const auto& [mem, ObsAction] : policyMealy.actionSelection) {
-                if (reachableNodes.find(mem) != reachableNodes.end()) {
-                    // auto controllerFileName = folderName + "/" + "scheduler_" + std::to_string(mem) + ".csv";
-                    auto controllerFileName = folderSchName + "/" + std::to_string(mem) + ".csv";
-                    std::ofstream logSchedulerI(controllerFileName);
-                    if (!logSchedulerI.is_open()) {
-                        std::cerr << "Failed to open scheduler file: " << controllerFileName << std::endl;
-                        continue;
-                    }
-                    // Prepending the metadata to the scheduler file
-                    if(unstructuredObservations){
-                        logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << 2 << " 1" << std::endl;
-                    }
-                    else {
-                        logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize + 1 << " 1" << std::endl;
-                    }
-                    for (const auto& [obs, actDist] : ObsAction) {
-                        // std::stringstream ssMem;
-                        std::stringstream ss;
-                        // todo: completely remove the memory here because we know which memory location we are in
-                        if (!actDist.empty()) {
-                            auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
-                            for (const auto& act : actDist) {
-                                ss << mem;
-                                if(unstructuredObservations){
-                                    ss << "," << obs;
-                                }
-                                else {
-                                    for (const auto& [obsName, obsVal] : obsInfo) {
-                                        ss << "," << obsVal;
-                                    }
-                                }
-                                ss << ",";
-                                if (actionMapping.find(act) == actionMapping.end()) {
-                                    actionMapping[act] = actionCounter++;
-                                }
-                                int actionNumber = actionMapping[act];
-                                // ss << act << ",";
-                                ss << actionNumber << std::endl;
-                            }
-                            logSchedulerI << ss.str();
-                        }
-                    }
-                    logSchedulerI.close();
 
-                    STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName << " for memory: " << mem << std::endl);
-                }
-            }
+
 
             // memory-state transition-file
             for (const auto& [mem, ObsNextMem] : policyMealy.nextMemoryTransition) {
@@ -341,34 +350,67 @@ struct ObservationPolicyPosteriorMealy {
                     // metadata to the memory transitions file
                     for (const auto& [obs, nextMem] : ObsNextMem) {
                         if (reachableNodes.find(nextMem) != reachableNodes.end()) {
+                            auto x = nextMem;
                             if (!ObsNextMem.empty()) {
-                                std::stringstream ss;
-                                auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obs.first);
-                                auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obs.second);
+                                if (lazyMemoryTransition) {
+                                    if (isPairInWinTransitions(mem, obs, nextMem)) {
+                                        auto reachSetFromMem= getReachableNodesFromArbitraryStartNode(mem);
+                                        x = findMaxReachableNode(reachSetFromMem);
+                                        std::vector<std::string> actionVector;
+                                        actionVector.push_back("skip");
+                                        skipActionSelection[x][obs.second]=actionVector;
+                                    }
+                                    std::stringstream ss;
+                                    auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obs.first);
+                                    auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obs.second);
 
-                                ss << mem;
-                                if(unstructuredObservations){
-                                    ss << "," << obs.first << "," << obs.second;
-                                }
-                                else {
-                                    for (const auto& [obsName, obsVal] : obsInfo1) {
-                                        // write observation values for DT transitions
-                                        ss << "," << obsVal;
+                                    ss << mem;
+                                    if(unstructuredObservations){
+                                        ss << "," << obs.first << "," << obs.second;
                                     }
-                                    for (const auto& [obsName, obsVal] : obsInfo2) {
-                                        ss << "," << obsVal;
+                                    else {
+                                        for (const auto& [obsName, obsVal] : obsInfo1) {
+                                            // write observation values for DT transitions
+                                            ss << "," << obsVal;
+                                        }
+                                        for (const auto& [obsName, obsVal] : obsInfo2) {
+                                            ss << "," << obsVal;
+                                        }
                                     }
+                                    ss << ",";
+                                    ss << x;
+                                    logMemoryTransitionsI << ss.str() << std::endl;
                                 }
-                                ss << ",";
-                                //  & nextMem!=(mem-1) can avoid this conjunct to make it even smaller
-                                if(lazyMemoryTransition & (nextMem!=mem)){
-                                    ss << "0";
-                                }
-                                else {
+                                else{
+
+                                    std::stringstream ss;
+                                    auto obsInfo1 = obsValuations.getObsevationValuationforExplainability(obs.first);
+                                    auto obsInfo2 = obsValuations.getObsevationValuationforExplainability(obs.second);
+
+                                    ss << mem;
+                                    if(unstructuredObservations){
+                                        ss << "," << obs.first << "," << obs.second;
+                                    }
+                                    else {
+                                        for (const auto& [obsName, obsVal] : obsInfo1) {
+                                            // write observation values for DT transitions
+                                            ss << "," << obsVal;
+                                        }
+                                        for (const auto& [obsName, obsVal] : obsInfo2) {
+                                            ss << "," << obsVal;
+                                        }
+                                    }
+                                    ss << ",";
+                                    //  & nextMem!=(mem-1) can avoid this conjunct to make it even smaller
+                                    //                                if(lazyMemoryTransition & (nextMem!=mem)){
+                                    //                                    ss << "0";
+                                    //                                }
+                                    //                                else {
                                     ss << nextMem;
+                                    //                                }
+                                    // ss << nextMem;
+                                    logMemoryTransitionsI << ss.str() << std::endl;
                                 }
-                                // ss << nextMem;
-                                logMemoryTransitionsI << ss.str() << std::endl;
                             }
                         }
                     }
@@ -384,6 +426,131 @@ struct ObservationPolicyPosteriorMealy {
                     }
                     checkFile.close();
                     STORM_PRINT("WRITING THE Memory FILE: " << memoryTransitionsFileName << " for memory: " << mem << std::endl);
+                }
+            }
+
+            // Observation based strategy
+            for (const auto& [mem, ObsAction] : policyMealy.actionSelection) {
+                if (reachableNodes.find(mem) != reachableNodes.end()) {
+                    if(lazyMemoryTransition){
+                        // auto controllerFileName = folderName + "/" + "scheduler_" + std::to_string(mem) + ".csv";
+                        auto controllerFileName = folderSchName + "/" + std::to_string(mem) + ".csv";
+                        std::ofstream logSchedulerI(controllerFileName);
+                        if (!logSchedulerI.is_open()) {
+                            std::cerr << "Failed to open scheduler file: " << controllerFileName << std::endl;
+                            continue;
+                        }
+                        // Prepending the metadata to the scheduler file
+                        if(unstructuredObservations){
+                            logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << 2 << " 1" << std::endl;
+                        }
+                        else {
+                            logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize + 1 << " 1" << std::endl;
+                        }
+                        for (const auto& [obs, actDist] : ObsAction) {
+                            // std::stringstream ssMem;
+                            std::stringstream ss;
+                            // todo: can completely remove the memory here because we know which memory location we are in
+                            if(skipActionSelection.find(mem)!=skipActionSelection.end() && skipActionSelection[mem].find(obs)!=skipActionSelection[mem].end()){
+                                auto actVector=skipActionSelection[mem][obs];
+                                if (!actVector.empty()) {
+                                    auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+                                    for (const auto& act : actVector) {
+                                        ss << mem;
+                                        if(unstructuredObservations){
+                                            ss << "," << obs;
+                                        }
+                                        else {
+                                            for (const auto& [obsName, obsVal] : obsInfo) {
+                                                ss << "," << obsVal;
+                                            }
+                                        }
+                                        ss << ",";
+                                        if (actionMapping.find(act) == actionMapping.end()) {
+                                            actionMapping[act] = actionCounter++;
+                                        }
+                                        int actionNumber = actionMapping[act];
+                                        // ss << act << ",";
+                                        ss << actionNumber << std::endl;
+                                    }
+                                    logSchedulerI << ss.str();
+                                }
+                            }
+                            else {
+                                if (!actDist.empty()) {
+                                    auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+                                    for (const auto& act : actDist) {
+                                        ss << mem;
+                                        if(unstructuredObservations){
+                                            ss << "," << obs;
+                                        }
+                                        else {
+                                            for (const auto& [obsName, obsVal] : obsInfo) {
+                                                ss << "," << obsVal;
+                                            }
+                                        }
+                                        ss << ",";
+                                        if (actionMapping.find(act) == actionMapping.end()) {
+                                            actionMapping[act] = actionCounter++;
+                                        }
+                                        int actionNumber = actionMapping[act];
+                                        // ss << act << ",";
+                                        ss << actionNumber << std::endl;
+                                    }
+                                    logSchedulerI << ss.str();
+                                }
+                            }
+                        }
+                        logSchedulerI.close();
+
+                        STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName << " for memory: " << mem << std::endl);
+                    }
+                    else {
+                        // auto controllerFileName = folderName + "/" + "scheduler_" + std::to_string(mem) + ".csv";
+                        auto controllerFileName = folderSchName + "/" + std::to_string(mem) + ".csv";
+                        std::ofstream logSchedulerI(controllerFileName);
+                        if (!logSchedulerI.is_open()) {
+                            std::cerr << "Failed to open scheduler file: " << controllerFileName << std::endl;
+                            continue;
+                        }
+                        // Prepending the metadata to the scheduler file
+                        if(unstructuredObservations){
+                            logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << 2 << " 1" << std::endl;
+                        }
+                        else {
+                            logSchedulerI << "#PERMISSIVE" << std::endl << "BEGIN " << obsInfoSize + 1 << " 1" << std::endl;
+                        }
+                        for (const auto& [obs, actDist] : ObsAction) {
+                            // std::stringstream ssMem;
+                            std::stringstream ss;
+                            // todo: completely remove the memory here because we know which memory location we are in
+                            if (!actDist.empty()) {
+                                auto obsInfo = obsValuations.getObsevationValuationforExplainability(obs);
+                                for (const auto& act : actDist) {
+                                    ss << mem;
+                                    if(unstructuredObservations){
+                                        ss << "," << obs;
+                                    }
+                                    else {
+                                        for (const auto& [obsName, obsVal] : obsInfo) {
+                                            ss << "," << obsVal;
+                                        }
+                                    }
+                                    ss << ",";
+                                    if (actionMapping.find(act) == actionMapping.end()) {
+                                        actionMapping[act] = actionCounter++;
+                                    }
+                                    int actionNumber = actionMapping[act];
+                                    // ss << act << ",";
+                                    ss << actionNumber << std::endl;
+                                }
+                                logSchedulerI << ss.str();
+                            }
+                        }
+                        logSchedulerI.close();
+
+                        STORM_PRINT("WRITING THE CONTROLLER FILE: " << controllerFileName << " for memory: " << mem << std::endl);
+                    }
                 }
             }
 
@@ -779,7 +946,7 @@ struct InternalObservationScheduler {
         return schedulerMoore;
     }
 
-    ObservationPolicyPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler, ObservationPolicyPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId) const {
+    ObservationPolicyPosteriorMealy update_fsc_mealy(const models::sparse::ChoiceLabeling& choiceLabelling, const std::vector<uint_fast64_t>& choiceIndices,  const std::vector<std::vector<uint64_t>>& statesPerObservation, storm::storage::BitVector const& observations, storm::storage::BitVector const& observationsAfterSwitch, std::unordered_map<uint64_t, uint64_t> winningObservationsFirstScheduler, ObservationPolicyPosteriorMealy schedulerPosteriorMealy, uint64_t schedulerId, bool lazyMemoryTransition) const {
         // STORM_PRINT("ObservationAfterSwitch in FSC mealy: " << observationsAfterSwitch << std::endl);
 //        bool isSwitch = false;
 //        // find-out if we have to transition to the switch state
@@ -797,9 +964,6 @@ struct InternalObservationScheduler {
                     auto choiceLabels = choiceLabelling.getLabelsOfChoice(rowIndex);
                     for (const auto& choiceLabel : choiceLabels) {
                         actionVector.push_back(choiceLabel);
-//                        if (schedulerId == 2) {
-//                            STORM_PRINT("Action: " << choiceLabel << " for observation: " << obs << std::endl);
-//                        }
                     }
                 }
                 schedulerPosteriorMealy.actionSelection[schedulerId][obs] = actionVector;
@@ -814,7 +978,7 @@ struct InternalObservationScheduler {
                 }
             }
                 // todo: the first observation should be dont care, currently cross product for all
-                //  how to effectively represent this?
+                //  can we avoid this cross product?
 //                if(!observationsAfterSwitch.get(obs)){
 //                    STORM_PRINT("NO observation After Switch for: " << obs << " in scheduler " << schedulerId << std::endl);
 //                    for (uint64_t obs1 = 0; obs1 < observations.size(); ++obs1) {
@@ -847,6 +1011,7 @@ struct InternalObservationScheduler {
                     if(observations.get(obs1)){
                         std::pair<uint64_t, uint64_t> obs_pair = std::make_pair(obs1, obs);
                         schedulerPosteriorMealy.nextMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
+                        schedulerPosteriorMealy.winMemoryTransition[schedulerId][obs_pair] = winningObservationsFirstScheduler[obs];
                     }
                 }
             }

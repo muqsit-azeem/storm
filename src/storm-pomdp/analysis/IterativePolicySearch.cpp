@@ -808,7 +808,7 @@ bool IterativePolicySearch<ValueType>::analyze(uint64_t k, storm::storage::BitVe
         }
         // update the FSC
         // schedulerMoore = scheduler.update_fsc_moore(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerMoore, stats.getIterations());
-        schedulerPostMealy = scheduler.update_fsc_mealy(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerPostMealy, stats.getIterations());
+        schedulerPostMealy = scheduler.update_fsc_mealy(choiceLabeling, choiceIndices, statesPerObservation, observations, observationsAfterSwitch, winningObservationsFirstScheduler, schedulerPostMealy, stats.getIterations(), options.lazyDTFSC);
 
         stats.winningRegionUpdatesTimer.stop();
         if (foundWhatWeLookFor) {
