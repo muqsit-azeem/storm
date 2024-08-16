@@ -130,7 +130,7 @@ struct ObservationPolicyPosteriorMealy {
     std::set<uint64_t> getReachableNodesFromArbitraryStartNode(uint64_t startNode) const {
         std::set<uint64_t> visited;
         std::queue<uint64_t> queue;
-        // visited.insert(startNode); // intentionally commented: do not insert the start node we want subsequent nodes
+        visited.insert(startNode);
         queue.push(startNode);
 
         while (!queue.empty()) {
@@ -147,6 +147,7 @@ struct ObservationPolicyPosteriorMealy {
                 }
             }
         }
+        visited.erase(startNode); // remove the start node: we do not want to have the start node we want subsequent nodes
         return visited;
     }
 
@@ -337,7 +338,7 @@ struct ObservationPolicyPosteriorMealy {
                     // memory-state transition-file
                     std::ofstream logMemoryTransitionsI(memoryTransitionsFileName);
                     if (!logMemoryTransitionsI.is_open()) {
-                        std::cerr << "Failed to open scheduler file: " << memoryTransitionsFileName << std::endl;
+                        std::cerr << "Failed to open memory transition file: " << memoryTransitionsFileName << std::endl;
                         continue;
                     }
                     if(unstructuredObservations){
@@ -471,6 +472,7 @@ struct ObservationPolicyPosteriorMealy {
                                         }
                                         int actionNumber = actionMapping[act];
                                         // ss << act << ",";
+                                        STORM_PRINT("CURRENT ACTION IN SKIP: " << act << std::endl);
                                         ss << actionNumber << std::endl;
                                     }
                                     logSchedulerI << ss.str();
@@ -495,6 +497,7 @@ struct ObservationPolicyPosteriorMealy {
                                         }
                                         int actionNumber = actionMapping[act];
                                         // ss << act << ",";
+                                        STORM_PRINT("CURRENT ACTION WITHOUT SKIP: " << act << std::endl);
                                         ss << actionNumber << std::endl;
                                     }
                                     logSchedulerI << ss.str();
