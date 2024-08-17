@@ -327,9 +327,6 @@ struct ObservationPolicyPosteriorMealy {
 
             STORM_PRINT("WRITING THE MEMORY FUNCTION DOT FILE GRAPH: " << folderName + "/" + "mem_fun.dot" << std::endl);
 
-
-
-
             // memory-state transition-file
             for (const auto& [mem, ObsNextMem] : policyMealy.nextMemoryTransition) {
                 if (reachableNodes.find(mem) != reachableNodes.end()) {
@@ -472,7 +469,7 @@ struct ObservationPolicyPosteriorMealy {
                                         }
                                         int actionNumber = actionMapping[act];
                                         // ss << act << ",";
-                                        STORM_PRINT("CURRENT ACTION IN SKIP: " << act << std::endl);
+                                        // STORM_PRINT("CURRENT ACTION IN SKIP: " << act << std::endl);
                                         ss << actionNumber << std::endl;
                                     }
                                     logSchedulerI << ss.str();
@@ -497,7 +494,7 @@ struct ObservationPolicyPosteriorMealy {
                                         }
                                         int actionNumber = actionMapping[act];
                                         // ss << act << ",";
-                                        STORM_PRINT("CURRENT ACTION WITHOUT SKIP: " << act << std::endl);
+                                        // STORM_PRINT("CURRENT ACTION WITHOUT SKIP: " << act << std::endl);
                                         ss << actionNumber << std::endl;
                                     }
                                     logSchedulerI << ss.str();
